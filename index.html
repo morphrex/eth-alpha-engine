@@ -317,42 +317,175 @@ var cfg = window.cfg;
   .close-btn:hover { background: rgba(255,51,102,0.2); }
 
   @media (max-width: 768px) {
-    #app { grid-template-columns: 1fr; }
-    #sidebar { border-right: none; border-bottom: 1px solid var(--border); }
-    .grid3,.grid4 { grid-template-columns: 1fr 1fr; }
+    /* ── LAYOUT ── */
+    #app { grid-template-columns: 1fr !important; }
+    #sidebar { display: none; } /* Hidden on mobile – shown via drawer */
+    #main { padding: 0.5rem; }
+
+    /* ── HEADER ── */
+    #header { padding: 0.5rem 0.75rem; }
+    .header-stats { display: none; }
+    .logo-title { font-size: 0.78rem; }
+    .logo-sub { font-size: 0.48rem; }
+    .logo-icon { width: 32px; height: 32px; font-size: 0.85rem; }
+
+    /* ── NAV TABS ── */
+    #nav {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #nav::-webkit-scrollbar { display: none; }
+    .nav-tab {
+      padding: 0.65rem 0.9rem;
+      font-size: 0.58rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── GRIDS ── */
+    .grid2 { grid-template-columns: 1fr 1fr !important; }
+    .grid3, .grid4 { grid-template-columns: 1fr 1fr !important; }
+
+    /* ── SIGNAL CARDS ── */
+    .signal-levels { grid-template-columns: repeat(2, 1fr) !important; }
+    .signal-dir { font-size: 0.95rem; }
+    .signal-card { padding: 0.75rem; }
+
+    /* ── MARKET PRICES ── */
+    .mkt-price { font-size: 1.15rem; }
+    .panel-header { font-size: 0.55rem; }
+
+    /* ── TOUCH TARGETS ── */
+    .btn, .take-btn, .close-btn, .preset-btn { min-height: 40px; }
+    .sig-filter-btn { min-height: 34px; padding: 6px 12px; }
+
+    /* ── TABLES ── */
+    .data-table th, .data-table td { padding: 5px 6px; font-size: 0.58rem; }
+    .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* ── CHART ── */
+    .chart-wrap { height: 160px !important; }
+
+    /* ── TICKER ── */
+    #ticker-bar { display: none; }
+
+    /* ── INPUTS – prevent iOS zoom ── */
+    input[type=number], input[type=text], select, textarea { font-size: 16px !important; }
+
+    /* ── RISK CALC two-col on mobile ── */
+    #risk-grid { grid-template-columns: 1fr !important; }
   }
 
-  @media (max-width: 768px) {
-    #app { grid-template-columns: 1fr !important; }
-    #sidebar { border-right: none; border-bottom: 1px solid var(--border); max-height: 260px; overflow-y: auto; }
-    .grid3,.grid4 { grid-template-columns: 1fr 1fr !important; }
-    .header-stats { display: none; }
-    .logo-title { font-size: 0.75rem; }
-    #nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .nav-tab { padding: 0.5rem 0.9rem; font-size: 0.6rem; min-width: auto; }
-    #main { padding: 0.6rem; }
-    .signal-levels { grid-template-columns: repeat(2, 1fr) !important; }
-    .mkt-price { font-size: 1.1rem; }
-    .panel-header { font-size: 0.56rem; letter-spacing: 0.06em; }
-    .take-btn, .close-btn, .btn { min-height: 36px; }
-    .data-table th, .data-table td { padding: 5px 6px; font-size: 0.6rem; }
-  }
   @media (max-width: 480px) {
-    .grid2 { grid-template-columns: 1fr 1fr !important; }
-    .grid3,.grid4 { grid-template-columns: 1fr !important; }
-    #ticker-bar { display: none; }
-    .logo-icon { width: 30px; height: 30px; font-size: 0.85rem; }
-    #header { padding: 0.5rem 0.8rem; gap: 0.5rem; }
-    .signal-dir { font-size: 0.9rem; }
-    .chart-wrap { height: 150px !important; }
-    input[type=number], select, textarea { font-size: 16px !important; } /* prevents iOS zoom */
+    .grid3, .grid4 { grid-template-columns: 1fr !important; }
+    .bt-stat-val { font-size: 0.85rem; }
   }
+
+  /* ── MOBILE SIDEBAR DRAWER ── */
+  #mobile-drawer {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+  }
+  #mobile-drawer.open { display: block; }
+  #drawer-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(2px);
+  }
+  #drawer-panel {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: min(85vw, 320px);
+    background: var(--bg2);
+    border-right: 1px solid var(--border2);
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex; flex-direction: column; gap: 0.9rem;
+    animation: slideIn 0.22s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  #drawer-close {
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--dim); border-radius: 4px; padding: 6px 14px;
+    font-family: var(--mono); font-size: 0.65rem; cursor: pointer;
+    align-self: flex-end; margin-bottom: 0.3rem;
+  }
+
+  /* ── MOBILE HEADER MENU BUTTON ── */
+  #menu-btn {
+    display: none;
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--cyan); border-radius: 4px; padding: 5px 10px;
+    font-size: 0.75rem; cursor: pointer; font-family: var(--mono);
+  }
+  @media (max-width: 768px) {
+    #menu-btn { display: flex; align-items: center; gap: 0.3rem; }
+  }
+
+  /* ── SAFE AREA (iPhone notch/home bar) ── */
+  #nav { padding-bottom: env(safe-area-inset-bottom, 0); }
+  body { padding-bottom: env(safe-area-inset-bottom, 0); }
 
 </style>
 </head>
 <body>
 
 
+<!-- Mobile Drawer -->
+<div id="mobile-drawer">
+  <div id="drawer-overlay" onclick="closeDrawer()"></div>
+  <div id="drawer-panel">
+    <button id="drawer-close" onclick="closeDrawer()">✕ CLOSE</button>
+
+    <div class="panel">
+      <div class="panel-header">BANKROLL CONFIGURATION</div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:0.5rem;">
+        <div>
+          <div class="field-label">CAPITAL (USD)</div>
+          <input type="number" id="bankroll-drawer" value="20000" oninput="document.getElementById('bankroll').value=this.value;updateRisk();">
+        </div>
+        <div class="grid2">
+          <div class="bt-stat">
+            <div class="bt-stat-label">MAX RISK/TRADE</div>
+            <div class="bt-stat-val" style="color:var(--gold)">$2,000</div>
+          </div>
+          <div class="bt-stat">
+            <div class="bt-stat-label">MAX LEVERAGE</div>
+            <div class="bt-stat-val" style="color:var(--red)">5×</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">LIVE MARKET <span><span class="dot dot-green"></span> DELTA EXCHANGE IN</span></div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:0.5rem;">
+        <div class="mkt-card">
+          <div class="flex-between">
+            <div class="mkt-sym">ETHUSD PERP</div>
+            <span id="eth-bias-tag-d" class="tag tag-neutral">NEUTRAL</span>
+          </div>
+          <div class="mkt-price" id="eth-perp-price-d">Loading...</div>
+        </div>
+        <div class="mkt-card">
+          <div class="mkt-sym">ETH/BTC RATIO</div>
+          <div class="mkt-price" id="eth-btc-ratio-d" style="font-size:1rem;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">QUICK PRESETS</div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:0.35rem;">
+        <button class="preset-btn" onclick="runPreset('daily');closeDrawer()">📊 Daily Setup Scan</button>
+        <button class="preset-btn" onclick="runPreset('scalp');closeDrawer()">⚡ Scalp Kill Zone</button>
+        <button class="preset-btn" onclick="runPreset('meanrev');closeDrawer()">↔ Mean Rev Check</button>
+        <button class="preset-btn" onclick="runPreset('arb');closeDrawer()">⟲ Arb Spread Alert</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- iPhone Install Banner -->
 <div id="iphone-banner" style="display:none;background:linear-gradient(90deg,#0a1f35,#0d2a4a);border-bottom:1px solid var(--cyan);padding:0.6rem 1rem;font-size:0.65rem;align-items:center;gap:0.8rem;flex-wrap:wrap;">
   <span style="font-size:1.2rem;">📱</span>
@@ -371,6 +504,7 @@ var cfg = window.cfg;
       <div class="logo-sub">CLINICAL ETH TRADING AI · DELTA EXCHANGE INDIA · ॐ</div>
     </div>
   </div>
+  <button id="menu-btn" onclick="openDrawer()">☰ MENU</button>
   <div class="header-stats">
     <div class="hstat">
       <div class="hstat-label">ETH/USD</div>
@@ -2130,7 +2264,32 @@ function loadFromStorage() {
     document.getElementById('iphone-banner').style.display = 'flex';
   }
 })();
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ─── Mobile Drawer ────────────────────────────────────────────────────────────
+function openDrawer() {
+  document.getElementById('mobile-drawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDrawer() {
+  document.getElementById('mobile-drawer').classList.remove('open');
+  document.body.style.overflow = '';
+}
+// Sync market data to drawer mirrors
+const _origLoad = loadMarketData;
+function patchDrawerSync() {
+  const priceEl = document.getElementById('eth-perp-price-d');
+  const ratioEl = document.getElementById('eth-btc-ratio-d');
+  const biasEl  = document.getElementById('eth-bias-tag-d');
+  setInterval(function() {
+    const p = document.getElementById('eth-perp-price');
+    const r = document.getElementById('eth-btc-ratio');
+    const b = document.getElementById('eth-bias-tag');
+    if (p && priceEl) priceEl.textContent = p.textContent;
+    if (r && ratioEl) ratioEl.textContent = r.textContent;
+    if (b && biasEl)  { biasEl.textContent = b.textContent; biasEl.className = b.className; }
+  }, 2000);
+}
+patchDrawerSync();
+
 updateRisk();
 loadFromStorage();
 loadMarketData();
@@ -2237,8 +2396,7 @@ setInterval(refreshSignals, 30000); // refresh signals every 30s
     const rows = window.latestBacktestRows || [];
     if(!rows.length) return;
     const cols = Object.keys(rows[0]);
-    const csv = [cols.join(',')].concat(rows.map(r => cols.map(k => JSON.stringify(r[k] ?? '')).join(','))).join('
-');
+    const csv = [cols.join(',')].concat(rows.map(r => cols.map(k => JSON.stringify(r[k] ?? '')).join(','))).join('\n');
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
