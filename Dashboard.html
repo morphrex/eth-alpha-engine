@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETH Trading Dashboard — Vijay v4</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0d0f;color:#e0e0e0;font-family:'Segoe UI',monospace;font-size:13px}
+  h1{text-align:center;padding:12px;color:#a78bfa;font-size:15px;letter-spacing:2px;border-bottom:1px solid #1e1e26}
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;background:#0f0f14;border-bottom:1px solid #1e1e26;font-size:11px;color:#555}
+  .topbar span{color:#a78bfa}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px 10px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 10px}
+  .card{background:#111116;border:1px solid #1e1e26;border-radius:8px;padding:12px}
+  .card h3{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+  .val{font-size:20px;font-weight:bold;color:#fff}
+  .val-sm{font-size:15px;font-weight:bold;color:#fff}
+  .sub{font-size:11px;color:#555;margin-top:3px}
+  .green{color:#22c55e!important}.red{color:#ef4444!important}.yellow{color:#eab308!important}.purple{color:#a78bfa!important}.gray{color:#555!important}
+  .section{padding:6px 12px 4px;font-size:10px;color:#444;text-transform:uppercase;letter-spacing:1px}
+  .signal-box{background:#111116;border:1px solid #1e1e26;border-radius:8px;margin:0 12px 10px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th{background:#16161e;color:#a78bfa;font-size:10px;text-transform:uppercase;padding:8px 10px;text-align:left;font-weight:600}
+  td{padding:8px 10px;border-bottom:1px solid #1a1a22;font-size:12px;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold}
+  .bg{background:#14532d;color:#22c55e}.br{background:#450a0a;color:#ef4444}
+  .by{background:#422006;color:#eab308}.bgr{background:#1f1f27;color:#666}
+  .bpur{background:#1e1a2e;color:#a78bfa}
+  .risk-box{background:#111116;border:1px solid #1e1e26;border-radius:8px;padding:14px}
+  .rrow{display:flex;justify-content:space-between;align-items:center;margin:7px 0;font-size:12px}
+  .rl{color:#666}.rv{color:#fff;font-weight:bold}
+  input[type=number]{background:#1a1a22;border:1px solid #2a2a35;color:#fff;padding:5px 8px;border-radius:4px;width:100%;font-size:12px;margin-top:4px}
+  label{font-size:10px;color:#555}
+  .inp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .btn{background:#a78bfa;color:#0d0d0f;border:none;padding:7px 14px;border-radius:5px;font-size:11px;font-weight:bold;cursor:pointer;width:100%;margin-top:4px}
+  .btn:hover{background:#c4b5fd}
+  .btn-green{background:#14532d;color:#22c55e}
+  .btn-green:hover{background:#166534}
+  .api-row{display:flex;gap:6px;align-items:center;padding:8px 12px;background:#0d0d10;border-top:1px solid #1a1a22}
+  .api-input{flex:1;background:#1a1a22;border:1px solid #2a2a35;color:#fff;padding:5px 10px;border-radius:4px;font-size:11px}
+  .api-btn{background:#22c55e;color:#0d0d0f;border:none;padding:5px 12px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;white-space:nowrap}
+  .api-status{font-size:10px;padding:4px 12px;color:#555}
+  .footer{text-align:center;color:#333;font-size:10px;padding:10px;border-top:1px solid #1a1a1a;margin-top:4px}
+  .pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .pill{background:#1a1a22;border:1px solid #2a2a35;border-radius:4px;padding:3px 10px;font-size:10px;color:#a78bfa;text-decoration:none}
+  .pill:hover{background:#22213a}
+  .conf-low{color:#ef4444}.conf-mid{color:#eab308}.conf-high{color:#22c55e}
+  hr{border:none;border-top:1px solid #1e1e26;margin:8px 0}
+  .alert-bar{margin:0 12px 8px;padding:10px 14px;border-radius:6px;font-size:12px;display:none}
+  .alert-warn{background:#2d1f00;border:1px solid #eab308;color:#eab308}
+  .alert-signal{background:#0d2d0d;border:1px solid #22c55e;color:#22c55e}
+  .alert-red{background:#2d0000;border:1px solid #ef4444;color:#ef4444}
+  .no-setup{background:#111116;border:1px solid #2a2a35;border-radius:6px;margin:0 12px 8px;padding:14px 16px;font-size:12px;color:#888;display:none}
+  .macd-pill{font-size:10px;padding:2px 8px;border-radius:4px;background:#1a1a22;border:1px solid #2a2a35;color:#888;display:inline-block;margin-top:4px;margin-right:4px}
+  .price-ref{font-size:10px;color:#444;margin-top:5px;font-style:italic}
+  .dxy-btns{display:flex;gap:6px;margin-top:6px}
+  .dxy-btn{flex:1;border:none;padding:4px 0;border-radius:3px;font-size:9px;font-weight:bold;cursor:pointer}
+  .conf-note{margin:0 12px 8px;padding:10px 14px;background:#0d0d10;border:1px solid #1e1e26;border-radius:6px;font-size:10px;color:#444;line-height:1.8}
+  /* Session clock */
+  .session-bar{display:flex;gap:8px;padding:6px 12px;background:#0d0d10;border-bottom:1px solid #1e1e26;flex-wrap:wrap;align-items:center}
+  .sess-pill{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:bold;border:1px solid #2a2a35;background:#111116;color:#555}
+  .sess-pill.active{background:#14532d;border-color:#22c55e;color:#22c55e}
+  .sess-pill.pre{background:#1f1900;border-color:#eab308;color:#eab308}
+  .sess-countdown{font-size:11px;color:#a78bfa;margin-left:auto}
+  /* ATR badge */
+  .atr-note{font-size:10px;color:#a78bfa;margin-top:3px}
+  /* MTF alignment */
+  .mtf-score-wrap{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .mtf-bar-bg{flex:1;height:6px;background:#1a1a22;border-radius:3px;overflow:hidden}
+  .mtf-bar-fg{height:6px;border-radius:3px;transition:width 0.5s}
+  .mtf-score-num{font-size:18px;font-weight:bold}
+  /* Trade log */
+  .log-box{background:#0d0d10;border:1px solid #1e1e26;border-radius:6px;margin:0 12px 10px;padding:10px 12px}
+  .log-entry{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #1a1a22;font-size:11px}
+  .log-entry:last-child{border-bottom:none}
+  .log-time{color:#555;white-space:nowrap;min-width:55px}
+  .log-text{flex:1;color:#ccc}
+  .log-pnl{white-space:nowrap;font-weight:bold}
+  .log-empty{color:#333;font-size:11px;padding:6px 0}
+  .log-input-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .log-input{background:#1a1a22;border:1px solid #2a2a35;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;flex:1;min-width:80px}
+  .log-btn{background:#1e1a2e;color:#a78bfa;border:none;padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;white-space:nowrap}
+  .log-btn:hover{background:#2a2240}
+  select.log-input{cursor:pointer}
+</style>
+</head>
+<body>
+
+<h1>⚡ ETH/USDT CLINICAL TRADING DASHBOARD v4</h1>
+
+<div class="topbar">
+  <span>Delta Exchange India</span>
+  <span id="statusDot">⬤ <span style="color:#555">Not connected</span></span>
+  <span id="lastUpdate">—</span>
+</div>
+
+<!-- SESSION CLOCK BAR -->
+<div class="session-bar">
+  <span id="sess-tokyo"  class="sess-pill">🇯🇵 Tokyo</span>
+  <span id="sess-london" class="sess-pill">🇬🇧 London</span>
+  <span id="sess-ny"     class="sess-pill">🇺🇸 New York</span>
+  <span style="font-size:10px;color:#444">|</span>
+  <span id="sess-local"  style="font-size:10px;color:#555">Local: —</span>
+  <span id="sess-utc"    style="font-size:10px;color:#555">UTC: —</span>
+  <span class="sess-countdown" id="sess-next">—</span>
+</div>
+
+<div class="api-row">
+  <span style="font-size:10px;color:#555;white-space:nowrap;margin-right:6px">🔑 Delta API Key:</span>
+  <input class="api-input" type="password" id="apiKey" placeholder="Paste your Delta Exchange India API key (read-only is fine)">
+  <button class="api-btn" onclick="connectDelta()">Connect</button>
+</div>
+<div class="api-status" id="apiStatus">Market data is public — prices load automatically without a key</div>
+
+<!-- ALERT BARS -->
+<div class="alert-bar alert-warn"   id="alertMR">⚠️ ETH/BTC ratio below 0.0285 — MEAN REVERT ZONE ACTIVE. Confirm vol spike below.</div>
+<div class="alert-bar alert-signal" id="alertFNG">🟢 F&amp;G Extreme Fear (&lt;25) — Long squeeze risk HIGH. No new longs until macro confirms.</div>
+<div class="alert-bar alert-warn"   id="alertDXY">⚠️ DXY &gt;103 flagged — macro headwind. Reduce size or stand aside.</div>
+<div class="alert-bar alert-warn"   id="alertFunding">⚠️ Funding rate strongly negative — shorts crowded. Long squeeze risk elevated.</div>
+<div class="alert-bar alert-red"    id="alertNoSetup"></div>
+<div class="alert-bar alert-signal" id="alertMTF">🟢 MTF Alignment ≥80% — High-conviction setup. All timeframes agree.</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 1: MACRO + SENTIMENT           -->
+<!-- ═══════════════════════════════════════ -->
+<div class="section">📊 1. Macro &amp; Sentiment — Drivers</div>
+<div class="grid4">
+  <div class="card">
+    <h3>ETH / USDT</h3>
+    <div class="val" id="ethPrice">—</div>
+    <div class="sub" id="eth24h">loading...</div>
+    <div class="sub" id="ethHL" style="margin-top:2px;font-size:10px">H: — / L: —</div>
+    <div class="price-ref" id="priceRef">—</div>
+  </div>
+  <div class="card">
+    <h3>BTC / USDT</h3>
+    <div class="val" id="btcPrice">—</div>
+    <div class="sub" id="btc24h">loading...</div>
+    <div class="sub" style="margin-top:5px;font-size:10px;color:#333">MR ratio anchored at BTC $70k ref</div>
+  </div>
+  <div class="card">
+    <h3>Fear &amp; Greed Index</h3>
+    <div class="val" id="fngVal">—</div>
+    <div class="sub" id="fngClass">loading...</div>
+    <div class="sub" id="fngSignal" style="margin-top:2px;font-size:10px">—</div>
+  </div>
+  <div class="card">
+    <h3>DXY / NFP Macro</h3>
+    <div class="val-sm" id="dxyVal" style="color:#555">Not set</div>
+    <div class="sub" id="dxyStatus">Set DXY manually from TradingView</div>
+    <div class="dxy-btns">
+      <button class="dxy-btn" style="background:#450a0a;color:#ef4444" onclick="setDXY('above')">DXY &gt;103 ⚠️</button>
+      <button class="dxy-btn" style="background:#14532d;color:#22c55e" onclick="setDXY('below')">DXY &lt;103 ✅</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- NEW: FUNDING + OI + MTF ALIGNMENT      -->
+<!-- ═══════════════════════════════════════ -->
+<div class="section">🔥 Market Microstructure — Funding · OI · MTF Alignment</div>
+<div class="grid4">
+  <div class="card">
+    <h3>Funding Rate (8h)</h3>
+    <div class="val-sm" id="fundingRate">—</div>
+    <div class="sub" id="fundingStatus">Loading from Delta...</div>
+    <div class="sub" style="margin-top:4px;font-size:10px;color:#333">Neg = shorts crowded · Pos = longs crowded</div>
+  </div>
+  <div class="card">
+    <h3>Open Interest Trend</h3>
+    <div class="val-sm" id="oiVal">—</div>
+    <div class="sub" id="oiStatus">Loading...</div>
+    <div class="sub" style="margin-top:4px;font-size:10px;color:#333">OI ↑ + Price ↓ = real shorts · OI ↓ = liq sweep</div>
+  </div>
+  <div class="card">
+    <h3>ATR (14) — H1</h3>
+    <div class="val-sm" id="atrVal">—</div>
+    <div class="sub" id="atrStatus">Loading candles...</div>
+    <div class="atr-note" id="atrNote">—</div>
+  </div>
+  <div class="card">
+    <h3>MTF Alignment Score</h3>
+    <div class="mtf-score-wrap">
+      <div class="mtf-score-num" id="mtfScore">—</div>
+      <div class="mtf-bar-bg"><div class="mtf-bar-fg" id="mtfBar" style="width:0%;background:#555"></div></div>
+    </div>
+    <div class="sub" id="mtfLabel" style="margin-top:6px">Waiting for candles...</div>
+    <div class="sub" id="mtfDetail" style="font-size:10px;margin-top:3px;color:#444">5m · H1 · 4H · 1D</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- MULTI-TF SIGNAL CARDS                  -->
+<!-- ═══════════════════════════════════════ -->
+<div class="section">⚡ Multi-Timeframe Signals</div>
+<div class="grid4" style="padding-bottom:0">
+  <div class="card">
+    <h3>Quick Scalp · 5m</h3>
+    <div style="margin-bottom:4px"><span id="qs-macd-sig" class="badge bgr">Loading...</span></div>
+    <div id="qs-ma-val"  class="sub">5m 50MA: —</div>
+    <div id="qs-rsi-val" class="sub">RSI: —</div>
+    <div class="sub" style="font-size:9px;color:#333;margin-top:4px">Target: 0.3–0.5% · SL: 0.5% buf</div>
+  </div>
+  <div class="card">
+    <h3>Scalp · H1</h3>
+    <div style="margin-bottom:4px"><span id="h1-macd-sig" class="badge bgr">Loading...</span></div>
+    <div id="h1-ma-val"  class="sub">H1 200MA: —</div>
+    <div id="h1-rsi-val" class="sub">RSI: —</div>
+    <div class="sub" style="font-size:9px;color:#333;margin-top:4px">Target: 1–2% · SL: 1% buf</div>
+  </div>
+  <div class="card">
+    <h3>Swing · 4H</h3>
+    <div style="margin-bottom:4px"><span id="sw-macd-sig" class="badge bgr">Loading...</span></div>
+    <div id="sw-ma-val"  class="sub">4h 50MA: —</div>
+    <div id="sw-rsi-val" class="sub">RSI: —</div>
+    <div class="sub" style="font-size:9px;color:#333;margin-top:4px">Target: 5–10% · SL: 1.5% buf</div>
+  </div>
+  <div class="card">
+    <h3>Positional · 1D</h3>
+    <div style="margin-bottom:4px"><span id="pos-macd-sig" class="badge bgr">Loading...</span></div>
+    <div id="pos-ma-val"  class="sub">Daily 200MA: —</div>
+    <div id="pos-rsi-val" class="sub">RSI: —</div>
+    <div class="sub" style="font-size:9px;color:#333;margin-top:4px">Target: 15–25% · SL: 2% buf</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 2: SMC / TECHNICAL             -->
+<!-- ═══════════════════════════════════════ -->
+<div class="section">📐 2. SMC / Technical — BSL · SSL · MACD · Vol · MTF Bias</div>
+<div class="grid4">
+  <div class="card">
+    <h3>ETH / BTC Ratio</h3>
+    <div class="val" id="ethBtcRatio">—</div>
+    <div class="sub" id="ethBtcSig">threshold: 0.0285 (90d low)</div>
+    <div class="sub" id="ethBtcZone" style="margin-top:2px;font-size:10px">—</div>
+  </div>
+  <div class="card">
+    <h3>H1 200MA vs Price</h3>
+    <div class="val-sm" id="ma200val">Calculating...</div>
+    <div class="sub"    id="ma200sub">Loading 1h candles...</div>
+    <div class="sub" style="margin-top:4px;font-size:10px;color:#333">Scalp: need price below MA</div>
+  </div>
+  <div class="card">
+    <h3>MACD 12/26/9 (H1)</h3>
+    <div class="val-sm" id="macdStatus">Calculating...</div>
+    <div id="macdPills" style="margin-top:4px"></div>
+    <div class="sub" style="margin-top:4px;font-size:10px;color:#333">Scalp: need bearish cross</div>
+  </div>
+  <div class="card">
+    <h3>Intraday Vol vs 20d Avg</h3>
+    <div class="val-sm" id="volRatio">—</div>
+    <div class="sub"    id="volStatus">Loading candles...</div>
+    <div class="sub" style="margin-top:2px;font-size:10px;color:#333">MR: need ≥1.5× spike</div>
+  </div>
+</div>
+
+<div class="grid3">
+  <div class="card">
+    <h3>Key SSL — Coinglass</h3>
+    <div class="val-sm red">$1,911</div>
+    <div class="sub">Buy-side liquidity below · Coinglass cited</div>
+  </div>
+  <div class="card">
+    <h3>Key BSL — Coinglass</h3>
+    <div class="val-sm green">$2,142 / $2,200</div>
+    <div class="sub">Sell-side liquidity above · Coinglass cited</div>
+  </div>
+  <div class="card">
+    <h3>Distance to Levels</h3>
+    <div class="sub" id="dist-ssl" style="color:#e0e0e0">SSL: —</div>
+    <div class="sub" id="dist-bsl" style="color:#e0e0e0;margin-top:4px">BSL: —</div>
+    <div class="sub" style="margin-top:6px;font-size:9px;color:#333">Liqs: Coinglass only — verify before entry</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 3: SETUPS TABLE                -->
+<!-- ═══════════════════════════════════════ -->
+<div class="section">📡 3. What / When — Setups (≥70% conf only)</div>
+<div class="no-setup" id="noSetupBox">
+  <strong style="color:#a78bfa">⛔ No Setup.</strong> <span id="noSetupReason">Both strategies below 70% confidence.</span><br>
+  <span style="font-size:11px">Monitor: <span id="monitorLevel" class="yellow">—</span> · Reassess EOD or next NY open.</span>
+</div>
+<div class="signal-box">
+  <table>
+    <thead>
+      <tr>
+        <th>Strat</th><th>Sess</th><th>Dir</th><th>Entry</th><th>SL (ATR/buf)</th><th>TP1 / TP2 (1:2)</th><th>Conf % (2026 analog)</th><th>Conf</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="scalp-row">
+        <td><strong>Scalp</strong><br><span style="font-size:10px;color:#555">H1 200MA + MACD cross</span></td>
+        <td>NY</td>
+        <td id="scalp-dir-cell">—</td>
+        <td id="scalp-entry">—</td>
+        <td id="scalp-sl">—</td>
+        <td id="scalp-tp">—</td>
+        <td id="scalp-conf">—</td>
+        <td id="scalp-conf-badge"><span class="badge bgr">—</span></td>
+        <td><span id="scalp-status" class="badge bgr">LOADING</span></td>
+      </tr>
+      <tr id="mr-row">
+        <td><strong>Mean Rev</strong><br><span style="font-size:10px;color:#555">ETH/BTC &lt;0.0285 + vol &gt;1.5×</span></td>
+        <td>L / NY</td>
+        <td id="mr-dir-cell"><span class="green">Long</span></td>
+        <td id="mr-entry">—</td>
+        <td id="mr-sl">—</td>
+        <td id="mr-tp">—</td>
+        <td id="mr-conf">—</td>
+        <td id="mr-conf-badge"><span class="badge bgr">—</span></td>
+        <td><span id="mr-status" class="badge bgr">LOADING</span></td>
+      </tr>
+      <tr id="qs-row">
+        <td><strong>Quick Scalp</strong><br><span style="font-size:10px;color:#555">5m MACD + 5m 50MA</span></td>
+        <td>Any</td>
+        <td id="qs-dir-cell">—</td>
+        <td id="qs-entry">—</td>
+        <td id="qs-sl">—</td>
+        <td id="qs-tp">—</td>
+        <td id="qs-conf">—</td>
+        <td id="qs-conf-badge"><span class="badge bgr">—</span></td>
+        <td><span id="qs-status" class="badge bgr">LOADING</span></td>
+      </tr>
+      <tr id="sw-row">
+        <td><strong>Swing</strong><br><span style="font-size:10px;color:#555">4h MACD + RSI + 4h 50MA</span></td>
+        <td>L / NY</td>
+        <td id="sw-dir-cell">—</td>
+        <td id="sw-entry">—</td>
+        <td id="sw-sl">—</td>
+        <td id="sw-tp">—</td>
+        <td id="sw-conf">—</td>
+        <td id="sw-conf-badge"><span class="badge bgr">—</span></td>
+        <td><span id="sw-status" class="badge bgr">LOADING</span></td>
+      </tr>
+      <tr id="po-row">
+        <td><strong>Positional</strong><br><span style="font-size:10px;color:#555">Daily MACD + 200MA + RSI</span></td>
+        <td>Daily</td>
+        <td id="po-dir-cell">—</td>
+        <td id="po-entry">—</td>
+        <td id="po-sl">—</td>
+        <td id="po-tp">—</td>
+        <td id="po-conf">—</td>
+        <td id="po-conf-badge"><span class="badge bgr">—</span></td>
+        <td><span id="po-status" class="badge bgr">LOADING</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="conf-note">
+  <strong style="color:#a78bfa">Conf scoring (2026 analogs) — SL now ATR-adaptive:</strong><br>
+  <strong>Scalp:</strong> base 10% · +15% MACD bearish cross · +15% below H1 200MA · +10% bearish 24h · +10% DXY&lt;103 · +10% F&amp;G fear · +8% funding negative (crowded shorts = long squeeze risk → short caution) · −10% ETH/BTC above thresh · −8% DXY&gt;103<br>
+  <strong>MR:</strong> base 15% · +20% ratio&lt;0.0285 · +20% vol≥1.5× · +15% F&amp;G&lt;45 · +12% funding very negative (long squeeze ↑ → wait) · +10% DXY&lt;103 · −10% MACD still bearish · −8% DXY&gt;103<br>
+  <strong>Quick Scalp:</strong> base 10% · +18% 5m MACD cross · +12% below 5m 50MA · +10% H1 aligned · +8% DXY&lt;103 · +8% F&amp;G fear · +6% MTF≥60%<br>
+  <strong>Swing:</strong> base 12% · +20% 4h MACD cross · +12% below 4h 50MA · +12% RSI&lt;40 · +8% OI rising (real pressure) · +8% DXY&lt;103<br>
+  <strong>Positional:</strong> base 12% · +22% daily MACD cross · +15% below daily 200MA · +15% RSI&lt;35 · +15% F&amp;G&lt;25 · +10% DXY&lt;103 · +10% MTF≥70%<br>
+  All: ≥70% conf gate · 1–2 setups max · <strong style="color:#a78bfa">Live conf. Reassess EOD.</strong>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 4+5: SIZER + MACRO CONTEXT     -->
+<!-- ═══════════════════════════════════════ -->
+<div class="grid2">
+  <div class="risk-box">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚖️ 4. Risk — Position Sizer · 25x · 10% Cap</div>
+    <div class="inp-grid">
+      <div><label>Bank (₹)</label><input type="number" id="bank" value="2000" oninput="calcSize()"></div>
+      <div><label>Risk % (max 10%)</label><input type="number" id="riskPct" value="10" max="10" oninput="calcSize()"></div>
+      <div><label>Entry ($)</label><input type="number" id="entryP" placeholder="e.g. 2045" oninput="calcSize()"></div>
+      <div><label>Stop Loss ($)</label><input type="number" id="slP" placeholder="e.g. 2075" oninput="calcSize()"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <div style="flex:1"><label>INR/USD Rate</label><input type="number" id="inrRate" value="85" oninput="calcSize()"></div>
+      <div style="flex:1"><label>ATR Multiplier</label><input type="number" id="atrMult" value="1.5" step="0.1" oninput="calcSize()"></div>
+    </div>
+    <button class="btn" onclick="fillFromScalp()" style="margin-top:8px">⚡ Fill Scalp (ATR SL)</button>
+    <button class="btn btn-green" onclick="fillFromMR()">🔄 Fill Mean Rev (ATR SL)</button>
+    <button class="btn" style="background:#1a1a2e;color:#a78bfa;margin-top:4px" onclick="fillFromQS()">⚡ Fill Quick Scalp</button>
+    <button class="btn" style="background:#1a1a2e;color:#22c55e;margin-top:4px" onclick="fillFromSwing()">📈 Fill Swing Setup</button>
+    <button class="btn" style="background:#1a1a2e;color:#eab308;margin-top:4px" onclick="fillFromPos()">🏦 Fill Positional Setup</button>
+    <hr>
+    <div class="rrow"><span class="rl">Risk Capital (₹ · 10% cap)</span><span class="rv" id="rc">₹200</span></div>
+    <div class="rrow"><span class="rl">Risk Capital (USD)</span><span class="rv" id="rcusd">$2.35</span></div>
+    <div class="rrow"><span class="rl">Entry − SL diff</span><span class="rv" id="diff">—</span></div>
+    <div class="rrow"><span class="rl">ATR SL suggestion</span><span class="rv purple" id="atrSlSug">—</span></div>
+    <div class="rrow"><span class="rl">Size = 0.1×Bank÷(E−SL)</span><span class="rv purple" id="posSize">—</span></div>
+    <div class="rrow"><span class="rl">Notional Value (25×)</span><span class="rv" id="notional">—</span></div>
+    <div class="rrow"><span class="rl">TP1 (1:1 RR)</span><span class="rv yellow" id="tp1">—</span></div>
+    <div class="rrow"><span class="rl">TP2 (1:2 RR · mid-reclaim)</span><span class="rv green" id="tp2">—</span></div>
+  </div>
+
+  <div class="risk-box">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🌐 5. Macro Context + Verify Links</div>
+    <div class="rrow"><span class="rl">HTF Bias (24h proxy)</span><span class="rv" id="htf-bias-side">—</span></div>
+    <div class="rrow"><span class="rl">Price vs H1 200MA</span><span class="rv" id="ma200-side">Calculating...</span></div>
+    <div class="rrow"><span class="rl">MACD 12/26/9 Signal</span><span class="rv" id="macd-side">—</span></div>
+    <div class="rrow"><span class="rl">Intraday Vol Ratio</span><span class="rv" id="macro-vol">—</span></div>
+    <div class="rrow"><span class="rl">Funding Rate</span><span class="rv" id="macro-funding">—</span></div>
+    <div class="rrow"><span class="rl">OI Trend</span><span class="rv" id="macro-oi">—</span></div>
+    <div class="rrow"><span class="rl">ATR (14, H1)</span><span class="rv" id="macro-atr">—</span></div>
+    <div class="rrow"><span class="rl">MTF Alignment</span><span class="rv" id="macro-mtf">—</span></div>
+    <div class="rrow"><span class="rl">F&amp;G Index</span><span class="rv" id="macro-fng">—</span></div>
+    <div class="rrow"><span class="rl">ETH/BTC Zone</span><span class="rv" id="macro-ratio">—</span></div>
+    <div class="rrow"><span class="rl">ETH 24h Move</span><span class="rv" id="macro-move">—</span></div>
+    <div class="rrow"><span class="rl">DXY Status</span><span class="rv" id="macro-dxy">Set manually above ↑</span></div>
+    <div class="rrow"><span class="rl">SSL (Coinglass)</span><span class="rv red">$1,911</span></div>
+    <div class="rrow"><span class="rl">BSL (Coinglass)</span><span class="rv green">$2,142 / $2,200</span></div>
+    <div style="font-size:9px;color:#333;margin:4px 0 8px">Liqs: Coinglass only. No unverified figures.</div>
+    <div class="pill-row">
+      <a class="pill" href="https://www.tradingview.com/chart/?symbol=BINANCE:ETHUSDT" target="_blank">ETH H1 TV</a>
+      <a class="pill" href="https://www.tradingview.com/chart/?symbol=BINANCE:ETHBTC" target="_blank">ETH/BTC TV</a>
+      <a class="pill" href="https://www.tradingview.com/chart/?symbol=TVC:DXY" target="_blank">DXY TV</a>
+      <a class="pill" href="https://www.coinglass.com/pro/futures/LiquidationMap" target="_blank">Coinglass Liqs</a>
+      <a class="pill" href="https://www.coinglass.com/FearGreedIndex" target="_blank">F&amp;G Chart</a>
+      <a class="pill" href="https://www.coinglass.com/pro/futures/OpenInterest" target="_blank">OI (Coinglass)</a>
+      <a class="pill" href="https://india.delta.exchange" target="_blank">Delta India</a>
+    </div>
+    <div style="margin-top:10px;padding:8px;background:#0d0d10;border-radius:4px;font-size:10px;color:#555;line-height:1.7">
+      ⚠️ Scalp: MACD bearish cross <em>and</em> price &lt;H1 200MA required.<br>
+      ⚠️ MR: ratio &lt;0.0285 <em>and</em> vol ≥1.5× 20d avg — both live.<br>
+      ⚠️ SL = ATR×mult preferred over flat % — use ATR SL suggestion above.<br>
+      ⚠️ Only trade NY open if ETH ATR &gt;2% confirmed.<br>
+      ⚠️ &lt;70% conf → No Setup. Monitor level cited.<br>
+      <strong style="color:#a78bfa">Live conf. Reassess EOD.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TRADE LOG                              -->
+<!-- ═══════════════════════════════════════ -->
+<div class="section">📓 Trade Log — Session Memory</div>
+<div class="log-box">
+  <div id="logEntries"><div class="log-empty">No trades logged this session.</div></div>
+  <div class="log-input-row">
+    <select class="log-input" id="logStrat" style="max-width:120px">
+      <option>Scalp</option><option>Mean Rev</option><option>Quick Scalp</option><option>Swing</option><option>Positional</option>
+    </select>
+    <select class="log-input" id="logDir" style="max-width:80px">
+      <option>Long</option><option>Short</option>
+    </select>
+    <input class="log-input" type="number" id="logEntry" placeholder="Entry $" style="max-width:90px">
+    <input class="log-input" type="number" id="logExit"  placeholder="Exit $"  style="max-width:90px">
+    <input class="log-input" type="number" id="logSize"  placeholder="Size ETH" style="max-width:90px">
+    <input class="log-input" type="text"   id="logNote"  placeholder="Note (optional)" style="flex:2">
+    <button class="log-btn" onclick="logTrade()">+ Log Trade</button>
+    <button class="log-btn" style="background:#2d0000;color:#ef4444" onclick="clearLog()">Clear</button>
+  </div>
+</div>
+
+<div class="footer">
+  Data: Delta Exchange India (price · OHLCV · funding · OI) · alternative.me (F&amp;G) · Coinglass (liqs — manual verify) · WS: ~1s · Candles/ATR: 5s · F&amp;G: 60s<br>
+  <span style="color:#1a1a1a">No AI. Open locally in Chrome/Edge.</span>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+const DELTA_BASE    = 'https://api.india.delta.exchange';
+const ETHBTC_THRESH = 0.0285;
+const VOL_THRESH    = 1.5;
+const CONF_MIN      = 70;
+const SSL_LEVEL     = 1911;
+const BSL1          = 2142;
+const BSL2          = 2200;
+const SL_BUF        = 0.01;
+
+// ── State ──────────────────────────────────────────────────
+let ethLive = null, btcLive = null;
+let sessionOpenPrice = null;
+let dxyAbove103 = null;
+let fngLive = null;
+let atrLive = null;        // ATR(14) H1
+let fundingLive = null;    // funding rate (decimal e.g. 0.0001)
+let oiLive = { current: null, prev: null };
+let macdLive = { cross: null, bearish: null, aboveMA200: null, ma200: null };
+let volLive  = { ratio: null, range: null, avg: null };
+let macd5m   = { cross: null, bearish: null, ma50: null, aboveMA50: null, rsi: null };
+let macd4h   = { cross: null, bearish: null, ma50: null, aboveMA50: null, rsi: null };
+let macd1d   = { cross: null, bearish: null, ma200: null, aboveMA200: null, rsi: null };
+let mtfScore = 0;
+let lastQSEntry=null, lastQSSL=null, lastSwingEntry=null, lastSwingSL=null, lastPosEntry=null, lastPosSL=null;
+let tradeLog = [];
+
+// ── Session Clock ──────────────────────────────────────────
+// Sessions in UTC hours: Tokyo 0-9, London 7-16, NY 13-22
+const SESSIONS = [
+  { id:'sess-tokyo',  name:'🇯🇵 Tokyo',    start:0,  end:9  },
+  { id:'sess-london', name:'🇬🇧 London',   start:7,  end:16 },
+  { id:'sess-ny',     name:'🇺🇸 New York', start:13, end:22 },
+];
+function updateSessionClock() {
+  const now = new Date();
+  const utcH = now.getUTCHours() + now.getUTCMinutes()/60;
+  document.getElementById('sess-local').textContent = 'Local: ' + now.toLocaleTimeString('en-IN');
+  document.getElementById('sess-utc').textContent   = 'UTC: ' + now.toUTCString().slice(17,22);
+
+  let nextOpen = null, nextName = '', minMins = Infinity;
+  SESSIONS.forEach(s => {
+    const el = document.getElementById(s.id);
+    const active = utcH >= s.start && utcH < s.end;
+    const pre    = utcH >= s.start - 0.5 && utcH < s.start;
+    el.textContent = s.name + (active ? ' ●' : '');
+    el.className   = 'sess-pill' + (active ? ' active' : (pre ? ' pre' : ''));
+    if (!active) {
+      let minsTo = ((s.start - utcH + 24) % 24) * 60;
+      if (minsTo < minMins) { minMins = minsTo; nextName = s.name; }
+    }
+  });
+  const h = Math.floor(minMins/60), m = Math.floor(minMins%60);
+  document.getElementById('sess-next').textContent = `Next: ${nextName} in ${h}h ${m}m`;
+}
+setInterval(updateSessionClock, 1000);
+updateSessionClock();
+
+// ── DXY ────────────────────────────────────────────────────
+function setDXY(state) {
+  dxyAbove103 = (state === 'above');
+  const el = document.getElementById('dxyVal');
+  el.textContent = dxyAbove103 ? 'DXY > 103' : 'DXY < 103';
+  el.className   = 'val-sm ' + (dxyAbove103 ? 'red' : 'green');
+  document.getElementById('dxyStatus').textContent = dxyAbove103 ? '⚠️ Risk-off — headwind for longs' : '✅ Risk-on tailwind';
+  document.getElementById('macro-dxy').textContent = dxyAbove103 ? '>103 Risk-off ⚠️' : '<103 Tailwind ✅';
+  document.getElementById('macro-dxy').className   = 'rv ' + (dxyAbove103 ? 'red' : 'green');
+  document.getElementById('alertDXY').style.display = dxyAbove103 ? 'block' : 'none';
+  evaluateSetups();
+}
+
+// ── Delta API helpers ──────────────────────────────────────
+async function fetchDeltaTicker(symbol) {
+  const r = await fetch(`${DELTA_BASE}/v2/tickers/${symbol}`);
+  const j = await r.json(); return j.result;
+}
+async function fetchDeltaCandles(symbol, resolution, count) {
+  const secPerBar = resolution==='1d'?86400:resolution==='4h'?14400:resolution==='1h'?3600:resolution==='5m'?300:resolution==='15m'?900:300;
+  const end   = Math.floor(Date.now()/1000);
+  const start = end - secPerBar * count;
+  // Delta India API expects string resolution directly: '5m','1h','4h','1d'
+  const r = await fetch(`${DELTA_BASE}/v2/history/candles?symbol=${symbol}&resolution=${resolution}&start=${start}&end=${end}`);
+  const j = await r.json();
+  return Array.isArray(j.result) ? j.result : [];
+}
+async function connectDelta() {
+  document.getElementById('apiStatus').textContent = '⟳ Connecting...';
+  await fetchAllData();
+}
+
+// ── Math helpers ───────────────────────────────────────────
+function emaArray(closes, period) {
+  const k = 2/(period+1); const out = [];
+  let e = closes.slice(0,period).reduce((a,b)=>a+b,0)/period; out.push(e);
+  for (let i=period;i<closes.length;i++){e=closes[i]*k+e*(1-k);out.push(e);}
+  return out;
+}
+function computeMACD(closes) {
+  if (closes.length<40) return null;
+  const e12=emaArray(closes,12), e26=emaArray(closes,26);
+  const macdLine=e26.map((v,i)=>e12[i+14]-v).filter(v=>!isNaN(v)&&v!==undefined);
+  if (macdLine.length<9) return null;
+  const sig=emaArray(macdLine,9); const n=sig.length;
+  const lM=macdLine[8+n-1], pM=macdLine[8+n-2], lS=sig[n-1], pS=sig[n-2];
+  const hist=lM-lS, prevHist=pM-pS;
+  let cross='none';
+  if(pM>=pS&&lM<lS) cross='bearish';
+  if(pM<=pS&&lM>lS) cross='bullish';
+  return {macdLine:lM,signalLine:lS,hist,prevHist,cross,bearish:hist<0};
+}
+function computeMA(closes, period) {
+  if(closes.length<period) return null;
+  return closes.slice(-period).reduce((a,b)=>a+b,0)/period;
+}
+function computeRSI(closes, period=14) {
+  if(closes.length<period+1) return null;
+  const slice=closes.slice(-(period+20));
+  let g=0,l=0;
+  for(let i=1;i<=period;i++){const d=slice[i]-slice[i-1];if(d>0)g+=d;else l-=d;}
+  let ag=g/period,al=l/period;
+  for(let i=period+1;i<slice.length;i++){
+    const d=slice[i]-slice[i-1];
+    ag=(ag*(period-1)+(d>0?d:0))/period;
+    al=(al*(period-1)+(d<0?-d:0))/period;
+  }
+  if(al===0) return 100;
+  return 100-(100/(1+ag/al));
+}
+function computeATR(candles, period=14) {
+  if(candles.length<period+1) return null;
+  const trs=[];
+  for(let i=1;i<candles.length;i++){
+    const h=parseFloat(candles[i].high), l=parseFloat(candles[i].low), pc=parseFloat(candles[i-1].close);
+    trs.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
+  }
+  if(trs.length<period) return null;
+  let atr=trs.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  for(let i=period;i<trs.length;i++) atr=(atr*(period-1)+trs[i])/period;
+  return atr;
+}
+function analyseCandles(candles, needMA200) {
+  if(!candles||candles.length<35) return null;
+  const closes=candles.map(c=>parseFloat(c.close));
+  const macd=computeMACD(closes), ma50=computeMA(closes,50);
+  const rsi=computeRSI(closes,14);
+  const ma200=needMA200?computeMA(closes,200):null;
+  const last=closes[closes.length-1];
+  return {macd,ma50,ma200,rsi,aboveMA50:ma50!==null?last>ma50:null,aboveMA200:ma200!==null?last>ma200:null,lastClose:last};
+}
+
+// ── ATR UI ─────────────────────────────────────────────────
+function renderATR(candles, price) {
+  const atr = computeATR(candles, 14);
+  if(!atr) return;
+  atrLive = atr;
+  const pct = (atr/price*100).toFixed(2);
+  const nyOk = parseFloat(pct) >= 2;
+  document.getElementById('atrVal').textContent    = '$'+atr.toFixed(2)+' ('+pct+'%)';
+  document.getElementById('atrVal').className      = 'val-sm '+(nyOk?'green':'yellow');
+  document.getElementById('atrStatus').textContent = nyOk ? '✅ >2% ATR — NY entry condition met' : '⚠️ <2% ATR — below NY entry threshold';
+  document.getElementById('atrNote').textContent   = 'SL at 1.5×ATR = $'+(atr*1.5).toFixed(2)+' · TP2 at 3×ATR = $'+(atr*3).toFixed(2);
+  document.getElementById('macro-atr').textContent = '$'+atr.toFixed(2)+' ('+pct+'%)' + (nyOk?' ✅':' ⚠️');
+  document.getElementById('macro-atr').className   = 'rv '+(nyOk?'green':'yellow');
+  calcSize(); // refresh sizer with new ATR
+}
+
+// ── Funding Rate ───────────────────────────────────────────
+async function fetchFunding() {
+  try {
+    // Delta India: funding rate is inside the ticker endpoint
+    const r = await fetch(`${DELTA_BASE}/v2/tickers/ETHUSD`);
+    const j = await r.json();
+    const rate = parseFloat(j.result?.next_funding_rate || j.result?.funding_rate || j.result?.annualized_funding || 0);
+    fundingLive = rate;
+    const pct = (rate*100).toFixed(4);
+    const isNeg = rate < 0;
+    const isStrongNeg = rate < -0.001;
+    const el = document.getElementById('fundingRate');
+    el.textContent = (isNeg?'':'+') + pct + '%';
+    el.className = 'val-sm ' + (isStrongNeg?'red':isNeg?'yellow':'green');
+    document.getElementById('fundingStatus').textContent = isStrongNeg
+      ? '⚠️ Strongly negative — shorts crowded, long squeeze risk'
+      : isNeg ? 'Negative — longs pay shorts, slight bear bias'
+      : 'Positive — shorts pay longs, mild long bias';
+    document.getElementById('alertFunding').style.display = isStrongNeg ? 'block' : 'none';
+    document.getElementById('macro-funding').textContent = (isNeg?'':'+') + pct + '%' + (isStrongNeg?' ⚠️':isNeg?' ↓':' ↑');
+    document.getElementById('macro-funding').className = 'rv '+(isStrongNeg?'red':isNeg?'yellow':'green');
+    evaluateSetups();
+  } catch(e) {
+    document.getElementById('fundingStatus').textContent = 'Funding unavailable (try after connect)';
+  }
+}
+
+// ── Open Interest ──────────────────────────────────────────
+async function fetchOI() {
+  try {
+    const r = await fetch(`${DELTA_BASE}/v2/tickers/ETHUSD`);
+    const j = await r.json();
+    const res = j.result || {};
+    const oi = parseFloat(res.open_interest || res.oi_contracts || res.oi_value || res.contract_value || 0);
+    if(!oi) { document.getElementById('oiStatus').textContent='OI not in ticker — check Coinglass'; return; }
+    oiLive.prev    = oiLive.current;
+    oiLive.current = oi;
+    const change   = oiLive.prev ? ((oi-oiLive.prev)/oiLive.prev*100) : 0;
+    const eth24h   = parseFloat(document.getElementById('eth24h').dataset.val||0);
+    const oiUp     = change > 0.05;
+    const oiDown   = change < -0.05;
+    let interp='Neutral';
+    if(oiUp  && eth24h<0) interp='⚠️ OI ↑ + Price ↓ = real shorts building';
+    if(oiUp  && eth24h>0) interp='✅ OI ↑ + Price ↑ = bullish momentum';
+    if(oiDown&& eth24h<0) interp='🔄 OI ↓ + Price ↓ = liquidation sweep';
+    if(oiDown&& eth24h>0) interp='🔄 OI ↓ + Price ↑ = short squeeze';
+    document.getElementById('oiVal').textContent      = oi.toLocaleString()+' contracts';
+    document.getElementById('oiVal').className        = 'val-sm '+(oiUp?'red':oiDown?'green':'gray');
+    document.getElementById('oiStatus').textContent   = interp + (oiLive.prev?(' · Δ'+(change>0?'+':'')+change.toFixed(2)+'%'):'');
+    document.getElementById('macro-oi').textContent   = interp;
+    document.getElementById('macro-oi').className     = 'rv '+(oiUp&&eth24h<0?'red':oiDown&&eth24h<0?'green':'gray');
+  } catch(e){
+    document.getElementById('oiStatus').textContent = 'OI fetch failed — verify on Coinglass';
+  }
+}
+
+// ── MTF Alignment ──────────────────────────────────────────
+function computeMTFAlignment() {
+  // Score: how many TFs agree on direction
+  // Each TF contributes if bearish or bullish unanimously
+  const tfs = [
+    macd5m.bearish, macdLive.bearish, macd4h.bearish, macd1d.bearish
+  ].filter(v => v !== null);
+  if(tfs.length === 0) return 0;
+  const bearCount = tfs.filter(v=>v===true).length;
+  const bullCount = tfs.filter(v=>v===false).length;
+  const aligned   = Math.max(bearCount, bullCount);
+  const score     = Math.round((aligned / tfs.length) * 100);
+  const dir       = bearCount >= bullCount ? 'bearish' : 'bullish';
+  return { score, dir, bearCount, bullCount, total: tfs.length };
+}
+function renderMTF() {
+  const r = computeMTFAlignment();
+  if(!r) return;
+  mtfScore = r.score;
+  const col = r.score>=80?'#22c55e':r.score>=60?'#eab308':'#ef4444';
+  document.getElementById('mtfScore').textContent = r.score + '%';
+  document.getElementById('mtfScore').className   = 'mtf-score-num '+(r.score>=80?'green':r.score>=60?'yellow':'red');
+  document.getElementById('mtfBar').style.width   = r.score + '%';
+  document.getElementById('mtfBar').style.background = col;
+  const label = r.score>=80?'High Conviction — All TFs agree':r.score>=60?'Moderate — Most TFs aligned':'Mixed — TFs diverging';
+  document.getElementById('mtfLabel').textContent  = label;
+  document.getElementById('mtfDetail').textContent = `5m:${macd5m.bearish===null?'?':macd5m.bearish?'↓':'↑'} H1:${macdLive.bearish===null?'?':macdLive.bearish?'↓':'↑'} 4H:${macd4h.bearish===null?'?':macd4h.bearish?'↓':'↑'} 1D:${macd1d.bearish===null?'?':macd1d.bearish?'↓':'↑'} (${r.dir})`;
+  document.getElementById('macro-mtf').textContent = r.score+'% '+label.split('—')[0].trim();
+  document.getElementById('macro-mtf').className   = 'rv '+(r.score>=80?'green':r.score>=60?'yellow':'red');
+  document.getElementById('alertMTF').style.display = r.score>=80 ? 'block' : 'none';
+}
+
+// ── Vol ────────────────────────────────────────────────────
+function computeVolRatio(c1h,c1d) {
+  const today=c1h.slice(-24); if(!today.length) return null;
+  const range=Math.max(...today.map(c=>parseFloat(c.high)))-Math.min(...today.map(c=>parseFloat(c.low)));
+  const last20=c1d.slice(-20); if(last20.length<5) return null;
+  const avg=last20.reduce((s,c)=>s+(parseFloat(c.high)-parseFloat(c.low)),0)/last20.length;
+  return {ratio:range/avg,range,avg};
+}
+function renderVolUI(v) {
+  if(!v){document.getElementById('volRatio').textContent='—';return;}
+  volLive=v;
+  const r=v.ratio.toFixed(2)+'×', cls=v.ratio>=VOL_THRESH?'green':v.ratio>=1.2?'yellow':'gray';
+  document.getElementById('volRatio').textContent  = r;
+  document.getElementById('volRatio').className    = 'val-sm '+cls;
+  document.getElementById('volStatus').textContent = v.ratio>=VOL_THRESH
+    ? `✅ Spike — $${v.range.toFixed(0)} vs $${v.avg.toFixed(0)} avg`
+    : `${r} of 20d avg ($${v.range.toFixed(0)}/$${v.avg.toFixed(0)}) — need ≥1.5×`;
+  document.getElementById('macro-vol').textContent = r+(v.ratio>=VOL_THRESH?' ✅ MR':' — below');
+  document.getElementById('macro-vol').className   = 'rv '+cls;
+}
+
+// ── TF Badge renderer ──────────────────────────────────────
+function renderTFBadge(prefix, tf) {
+  const macd=tf.macd, rsi=tf.rsi, ma50=tf.ma50, ma200=tf.ma200, price=tf.lastClose;
+  let sig='NEUTRAL',cls='bgr';
+  if(macd){
+    if(macd.cross==='bullish'){sig='🟢 BULL CROSS';cls='bg';}
+    else if(macd.cross==='bearish'){sig='🔴 BEAR CROSS';cls='br';}
+    else if(macd.bearish===false){sig='↑ BULLISH';cls='bg';}
+    else if(macd.bearish===true){sig='↓ BEARISH';cls='br';}
+  }
+  const maText=ma50?(price>ma50?'Above 50MA':'Below 50MA'):(ma200?(price>ma200?'Above 200MA':'Below 200MA'):'—');
+  const rsiText=rsi?'RSI '+rsi.toFixed(1):'—';
+  const rsiCls=rsi?(rsi<30?'green':rsi>70?'red':rsi>50?'yellow':''):'';
+  const sigEl=document.getElementById(prefix+'-macd-sig');
+  const maEl=document.getElementById(prefix+'-ma-val');
+  const rsiEl=document.getElementById(prefix+'-rsi-val');
+  if(sigEl){sigEl.textContent=sig;sigEl.className='badge '+cls;}
+  if(maEl){maEl.textContent=maText;maEl.className='sub '+(maText.includes('Below')?'red':'green');}
+  if(rsiEl){rsiEl.textContent=rsiText;rsiEl.className='sub '+rsiCls;}
+}
+
+// ── MACD UI (H1) ───────────────────────────────────────────
+function renderMACDUI(macd, ma200, price) {
+  if(!macd){
+    document.getElementById('macdStatus').textContent='Need more candles';
+    document.getElementById('macdStatus').className='val-sm gray';
+    return;
+  }
+  macdLive.cross=macd.cross; macdLive.bearish=macd.bearish;
+  macdLive.aboveMA200=ma200!==null?price>ma200:null; macdLive.ma200=ma200;
+  const h1sig=document.getElementById('h1-macd-sig');
+  if(h1sig){
+    const hcls=macd.cross==='bearish'?'br':macd.cross==='bullish'?'bg':macd.bearish?'br':'bg';
+    const htxt=macd.cross==='bearish'?'🔴 BEAR CROSS':macd.cross==='bullish'?'🟢 BULL CROSS':macd.bearish?'↓ BEARISH':'↑ BULLISH';
+    h1sig.textContent=htxt;h1sig.className='badge '+hcls;
+  }
+  const h1ma=document.getElementById('h1-ma-val');
+  if(h1ma&&ma200) h1ma.textContent=(price<ma200?'Below':'Above')+' 200MA $'+ma200.toFixed(0);
+  const crossTxt=macd.cross==='bearish'?'🔴 Bearish Cross':macd.cross==='bullish'?'🟢 Bullish Cross':(macd.bearish?'↓ Bearish':'↑ Bullish');
+  const maTxt=ma200!==null?(price<ma200?`Below 200MA ($${ma200.toFixed(0)})`:`Above 200MA ($${ma200.toFixed(0)})`):'MA200: need 200 bars';
+  document.getElementById('macdStatus').textContent=crossTxt;
+  document.getElementById('macdStatus').className='val-sm '+(macd.cross==='bearish'?'red':macd.cross==='bullish'?'green':macd.bearish?'yellow':'green');
+  document.getElementById('macdPills').innerHTML=`<span class="macd-pill">${macd.bearish?'Hist ↓':'Hist ↑'}</span><span class="macd-pill">${maTxt}</span>`;
+  document.getElementById('ma200val').textContent=maTxt;
+  document.getElementById('ma200val').className='val-sm '+(ma200&&price<ma200?'red':'green');
+  document.getElementById('ma200sub').textContent=ma200?`200MA=$${ma200.toFixed(2)} · price=$${price.toFixed(2)}`:'Fetching...';
+  document.getElementById('ma200-side').textContent=maTxt;
+  document.getElementById('ma200-side').className='rv '+(ma200&&price<ma200?'red':'green');
+  document.getElementById('macd-side').textContent=crossTxt;
+  document.getElementById('macd-side').className='rv '+(macd.bearish?'red':'green');
+}
+
+// ── Confidence scoring ─────────────────────────────────────
+function scoreConf(strat) {
+  const ratio=(ethLive&&btcLive)?ethLive/btcLive:999;
+  const eth24h=parseFloat(document.getElementById('eth24h').dataset.val||0);
+  const fundingNeg = fundingLive !== null && fundingLive < -0.001;
+
+  if(strat==='scalp'){
+    let c=10;
+    if(macdLive.cross==='bearish') c+=15; else if(macdLive.bearish===true) c+=8;
+    if(macdLive.aboveMA200===false) c+=15;
+    if(eth24h<-1) c+=10; else if(eth24h<0) c+=5;
+    if(dxyAbove103===false) c+=10; else if(dxyAbove103===true) c-=8;
+    if(fngLive!==null&&fngLive<45) c+=10;
+    if(fundingNeg) c+=8; // crowded shorts = caution for scalp short
+    if(ratio>ETHBTC_THRESH) c-=10;
+    return Math.min(Math.max(c,5),93);
+  }
+  if(strat==='mr'){
+    let c=15;
+    if(ratio<ETHBTC_THRESH) c+=20; else c-=20;
+    if(volLive.ratio!==null){if(volLive.ratio>=VOL_THRESH) c+=20; else if(volLive.ratio>=1.2) c+=10;}
+    if(fngLive!==null){if(fngLive<25) c+=15; else if(fngLive<45) c+=8;}
+    if(fundingNeg) c-=12; // long squeeze risk → reduce MR long conf
+    if(dxyAbove103===false) c+=10; else if(dxyAbove103===true) c-=8;
+    if(macdLive.bearish===true) c-=10;
+    return Math.min(Math.max(c,5),90);
+  }
+  if(strat==='quickscalp'){
+    let c=10;
+    if(macd5m.cross==='bearish') c+=18; else if(macd5m.bearish===true) c+=8;
+    if(macd5m.cross==='bullish') c+=18; else if(macd5m.bearish===false) c+=8;
+    if(macd5m.aboveMA50===false) c+=12;
+    if(macdLive.bearish===true) c+=10;
+    if(macdLive.bearish===false) c+=10;
+    if(dxyAbove103===false) c+=8; else if(dxyAbove103===true) c-=6;
+    if(fngLive!==null&&fngLive<45) c+=8;
+    if(mtfScore>=60) c+=6;
+    return Math.min(Math.max(c,5),92);
+  }
+  if(strat==='swing'){
+    let c=12;
+    if(macd4h.cross==='bearish') c+=20; else if(macd4h.bearish===true) c+=10;
+    if(macd4h.cross==='bullish') c+=20; else if(macd4h.bearish===false) c+=10;
+    if(macd4h.aboveMA50===false) c+=12;
+    if(macd4h.rsi!==null){if(macd4h.rsi<40) c+=12; else if(macd4h.rsi>60) c+=8;}
+    if(oiLive.current&&oiLive.prev&&oiLive.current>oiLive.prev) c+=8;
+    if(macd1d.bearish===true) c+=8;
+    if(dxyAbove103===false) c+=8; else if(dxyAbove103===true) c-=8;
+    if(fngLive!==null&&fngLive<45) c+=8;
+    return Math.min(Math.max(c,5),92);
+  }
+  if(strat==='positional'){
+    let c=12;
+    if(macd1d.cross==='bearish') c+=22; else if(macd1d.bearish===true) c+=12;
+    if(macd1d.cross==='bullish') c+=22; else if(macd1d.bearish===false) c+=12;
+    if(macd1d.aboveMA200===false) c+=15;
+    if(macd1d.rsi!==null){if(macd1d.rsi<35) c+=15; else if(macd1d.rsi>65) c+=10;}
+    if(ratio<ETHBTC_THRESH) c+=10;
+    if(dxyAbove103===true) c-=10; else if(dxyAbove103===false) c+=10;
+    if(fngLive!==null&&fngLive<25) c+=15;
+    if(mtfScore>=70) c+=10;
+    return Math.min(Math.max(c,5),92);
+  }
+  return 0;
+}
+
+function confLabel(c){
+  if(c>=70) return {label:'High',badge:'bg',cls:'conf-high'};
+  if(c>=55) return {label:'Mid', badge:'by',cls:'conf-mid'};
+  return {label:'Low',badge:'br',cls:'conf-low'};
+}
+
+// ── ATR-based SL helper ────────────────────────────────────
+function atrSL(entry, dir, mult) {
+  if(!atrLive) return dir==='Short'?entry*(1+SL_BUF):entry*(1-SL_BUF);
+  return dir==='Short' ? entry + atrLive*mult : entry - atrLive*mult;
+}
+
+// ── Evaluate Setups ────────────────────────────────────────
+function evaluateSetups() {
+  if(!ethLive||!btcLive) return;
+  renderMTF();
+  const eth24h=parseFloat(document.getElementById('eth24h').dataset.val||0);
+  const ratio=ethLive/btcLive;
+  const atrMult=parseFloat(document.getElementById('atrMult').value)||1.5;
+
+  // ── Scalp ──
+  const sc=scoreConf('scalp'), scActive=sc>=CONF_MIN;
+  const scDir=(macdLive.bearish!==false&&eth24h<0)?'Short':'Long';
+  const scEntry=ethLive;
+  const scSL=atrSL(scEntry,scDir,atrMult);
+  const scDiff=Math.abs(scEntry-scSL);
+  const scTP1=scDir==='Short'?scEntry-scDiff:scEntry+scDiff;
+  const scTP2=scDir==='Short'?scEntry-scDiff*2:scEntry+scDiff*2;
+  const scCL=confLabel(sc), scRange=`${Math.max(sc-4,5)}–${Math.min(sc+4,93)}%`;
+  document.getElementById('scalp-dir-cell').innerHTML=scActive?`<span class="${scDir==='Short'?'red':'green'}">${scDir}</span>`:'<span class="gray">—</span>';
+  document.getElementById('scalp-entry').textContent=scActive?'$'+scEntry.toFixed(2):'—';
+  document.getElementById('scalp-sl').textContent=scActive?'$'+scSL.toFixed(2):'—';
+  document.getElementById('scalp-tp').innerHTML=scActive?`<span class="yellow">$${scTP1.toFixed(2)}</span> / <span class="green">$${scTP2.toFixed(2)}</span>`:'—';
+  document.getElementById('scalp-conf').innerHTML=`<span class="${scActive?scCL.cls:'gray'}">${scRange}</span>`;
+  document.getElementById('scalp-conf-badge').innerHTML=`<span class="badge ${scCL.badge}">${scCL.label}</span>`;
+  document.getElementById('scalp-status').textContent=scActive?(macdLive.cross==='bearish'?'⚡ ACTIVE':'VERIFY TV'):'NO SETUP';
+  document.getElementById('scalp-status').className='badge '+(scActive?(macdLive.cross==='bearish'?'bg':'by'):'bgr');
+
+  // ── Mean Rev ──
+  const mc=scoreConf('mr'), mcActive=mc>=CONF_MIN;
+  const mrEntry=SSL_LEVEL, mrSL=atrSL(mrEntry,'Long',atrMult);
+  const mrDiff=mrEntry-mrSL, mrTP1=mrEntry+mrDiff, mrTP2=mrEntry+mrDiff*2;
+  const mrCL=confLabel(mc), mrRange=`${Math.max(mc-4,5)}–${Math.min(mc+4,90)}%`;
+  document.getElementById('mr-entry').textContent=mcActive?'$'+mrEntry.toFixed(0):'—';
+  document.getElementById('mr-sl').textContent=mcActive?'$'+mrSL.toFixed(0):'—';
+  document.getElementById('mr-tp').innerHTML=mcActive?`<span class="yellow">$${mrTP1.toFixed(0)}</span> / <span class="green">$${mrTP2.toFixed(0)}</span>`:'—';
+  document.getElementById('mr-conf').innerHTML=`<span class="${mcActive?mrCL.cls:'gray'}">${mrRange}</span>`;
+  document.getElementById('mr-conf-badge').innerHTML=`<span class="badge ${mrCL.badge}">${mrCL.label}</span>`;
+  document.getElementById('mr-status').textContent=mcActive?'⚡ WATCH':(ratio<ETHBTC_THRESH?'NEED VOL':'NO SETUP');
+  document.getElementById('mr-status').className='badge '+(mcActive?'bg':ratio<ETHBTC_THRESH?'by':'bgr');
+
+  // ── Quick Scalp ──
+  const qsc=scoreConf('quickscalp'), qsActive=qsc>=CONF_MIN;
+  const qsDir=macd5m.bearish===true?'Short':'Long';
+  const qsEntry=ethLive, qsSL=atrSL(qsEntry,qsDir,0.8);
+  const qsDiff=Math.abs(qsEntry-qsSL);
+  const qsTP1=qsDir==='Short'?qsEntry-qsDiff:qsEntry+qsDiff;
+  const qsTP2=qsDir==='Short'?qsEntry-qsDiff*1.5:qsEntry+qsDiff*1.5;
+  const qsCL=confLabel(qsc), qsRange=Math.max(qsc-4,5)+'–'+Math.min(qsc+4,92);
+  if(qsActive){lastQSEntry=qsEntry;lastQSSL=qsSL;}
+  document.getElementById('qs-dir-cell').innerHTML=qsActive?`<span class='${qsDir==='Short'?'red':'green'}'>${qsDir}</span>`:'<span class="gray">—</span>';
+  document.getElementById('qs-entry').textContent=qsActive?'$'+qsEntry.toFixed(2):'—';
+  document.getElementById('qs-sl').textContent=qsActive?'$'+qsSL.toFixed(2):'—';
+  document.getElementById('qs-tp').innerHTML=qsActive?`<span class='yellow'>$${qsTP1.toFixed(2)}</span> / <span class='green'>$${qsTP2.toFixed(2)}</span>`:'—';
+  document.getElementById('qs-conf').innerHTML=`<span class='${qsActive?qsCL.cls:'gray'}'>${qsRange}%</span>`;
+  document.getElementById('qs-conf-badge').innerHTML=`<span class='badge ${qsCL.badge}'>${qsCL.label}</span>`;
+  document.getElementById('qs-status').textContent=qsActive?(macd5m.cross?'ACTIVE':'MONITOR'):'NO SETUP';
+  document.getElementById('qs-status').className='badge '+(qsActive?(macd5m.cross?'bg':'by'):'bgr');
+
+  // ── Swing ──
+  const swc=scoreConf('swing'), swActive=swc>=CONF_MIN;
+  const swDir=macd4h.bearish===true?'Short':'Long';
+  const swEntry=ethLive, swSL=atrSL(swEntry,swDir,2);
+  const swDiff=Math.abs(swEntry-swSL);
+  const swTP1=swDir==='Short'?swEntry-swDiff*1.5:swEntry+swDiff*1.5;
+  const swTP2=swDir==='Short'?swEntry-swDiff*3:swEntry+swDiff*3;
+  const swCL=confLabel(swc), swRange=Math.max(swc-4,5)+'–'+Math.min(swc+4,92);
+  if(swActive){lastSwingEntry=swEntry;lastSwingSL=swSL;}
+  document.getElementById('sw-dir-cell').innerHTML=swActive?`<span class='${swDir==='Short'?'red':'green'}'>${swDir}</span>`:'<span class="gray">—</span>';
+  document.getElementById('sw-entry').textContent=swActive?'$'+swEntry.toFixed(2):'—';
+  document.getElementById('sw-sl').textContent=swActive?'$'+swSL.toFixed(2):'—';
+  document.getElementById('sw-tp').innerHTML=swActive?`<span class='yellow'>$${swTP1.toFixed(0)}</span> / <span class='green'>$${swTP2.toFixed(0)}</span>`:'—';
+  document.getElementById('sw-conf').innerHTML=`<span class='${swActive?swCL.cls:'gray'}'>${swRange}%</span>`;
+  document.getElementById('sw-conf-badge').innerHTML=`<span class='badge ${swCL.badge}'>${swCL.label}</span>`;
+  document.getElementById('sw-status').textContent=swActive?(macd4h.cross?'ACTIVE':'MONITOR'):'NO SETUP';
+  document.getElementById('sw-status').className='badge '+(swActive?(macd4h.cross?'bg':'by'):'bgr');
+
+  // ── Positional ──
+  const poc=scoreConf('positional'), poActive=poc>=CONF_MIN;
+  const poDir=macd1d.bearish===true?'Short':'Long';
+  const poEntry=ethLive, poSL=atrSL(poEntry,poDir,3);
+  const poDiff=Math.abs(poEntry-poSL);
+  const poTP1=poDir==='Short'?poEntry-poDiff*2:poEntry+poDiff*2;
+  const poTP2=poDir==='Short'?poEntry-poDiff*4:poEntry+poDiff*4;
+  const poCL=confLabel(poc), poRange=Math.max(poc-4,5)+'–'+Math.min(poc+4,92);
+  if(poActive){lastPosEntry=poEntry;lastPosSL=poSL;}
+  document.getElementById('po-dir-cell').innerHTML=poActive?`<span class='${poDir==='Short'?'red':'green'}'>${poDir}</span>`:'<span class="gray">—</span>';
+  document.getElementById('po-entry').textContent=poActive?'$'+poEntry.toFixed(2):'—';
+  document.getElementById('po-sl').textContent=poActive?'$'+poSL.toFixed(2):'—';
+  document.getElementById('po-tp').innerHTML=poActive?`<span class='yellow'>$${poTP1.toFixed(0)}</span> / <span class='green'>$${poTP2.toFixed(0)}</span>`:'—';
+  document.getElementById('po-conf').innerHTML=`<span class='${poActive?poCL.cls:'gray'}'>${poRange}%</span>`;
+  document.getElementById('po-conf-badge').innerHTML=`<span class='badge ${poCL.badge}'>${poCL.label}</span>`;
+  document.getElementById('po-status').textContent=poActive?(macd1d.cross?'ACTIVE':'MONITOR'):'NO SETUP';
+  document.getElementById('po-status').className='badge '+(poActive?(macd1d.cross?'bg':'by'):'bgr');
+
+  // ── No Setup Gate ──
+  const anyActive=scActive||mcActive||qsActive||swActive||poActive;
+  const noBox=document.getElementById('noSetupBox'), noAlert=document.getElementById('alertNoSetup');
+  if(!anyActive){
+    noBox.style.display='block'; noAlert.style.display='block';
+    noAlert.textContent=`⛔ No Setup — Scalp ${sc}% · MR ${mc}% · QS ${qsc}% · Sw ${swc}% · Pos ${poc}% — all below ${CONF_MIN}%. Monitor $${ethLive.toFixed(0)}.`;
+    document.getElementById('monitorLevel').textContent=ratio<ETHBTC_THRESH?`$${SSL_LEVEL} MR zone`:`$${BSL1} BSL / $${SSL_LEVEL} SSL`;
+    document.getElementById('noSetupReason').textContent=`All strategies below ${CONF_MIN}% threshold.`;
+  } else {noBox.style.display='none';noAlert.style.display='none';}
+
+  if(scActive&&!document.getElementById('entryP').value){
+    document.getElementById('entryP').value=scEntry.toFixed(2);
+    document.getElementById('slP').value=scSL.toFixed(2);
+    calcSize();
+  }
+}
+
+// ── Fill Sizer ─────────────────────────────────────────────
+function fillFromScalp(){
+  if(!ethLive) return;
+  const eth24h=parseFloat(document.getElementById('eth24h').dataset.val||0);
+  const dir=eth24h<0?'Short':'Long';
+  const atrMult=parseFloat(document.getElementById('atrMult').value)||1.5;
+  document.getElementById('entryP').value=ethLive.toFixed(2);
+  document.getElementById('slP').value=atrSL(ethLive,dir,atrMult).toFixed(2);
+  calcSize();
+}
+function fillFromMR(){
+  const atrMult=parseFloat(document.getElementById('atrMult').value)||1.5;
+  document.getElementById('entryP').value=SSL_LEVEL;
+  document.getElementById('slP').value=atrSL(SSL_LEVEL,'Long',atrMult).toFixed(0);
+  calcSize();
+}
+function fillFromQS(){
+  const e=lastQSEntry||ethLive; if(!e) return;
+  document.getElementById('entryP').value=parseFloat(e).toFixed(2);
+  document.getElementById('slP').value=parseFloat(lastQSSL||e*(1-SL_BUF*0.5)).toFixed(2);
+  calcSize();
+}
+function fillFromSwing(){
+  const e=lastSwingEntry||ethLive; if(!e) return;
+  document.getElementById('entryP').value=parseFloat(e).toFixed(2);
+  document.getElementById('slP').value=parseFloat(lastSwingSL||e*(1-SL_BUF*1.5)).toFixed(2);
+  calcSize();
+}
+function fillFromPos(){
+  const e=lastPosEntry||ethLive; if(!e) return;
+  document.getElementById('entryP').value=parseFloat(e).toFixed(2);
+  document.getElementById('slP').value=parseFloat(lastPosSL||e*(1-SL_BUF*2)).toFixed(2);
+  calcSize();
+}
+function calcSize(){
+  const bank=parseFloat(document.getElementById('bank').value)||2000;
+  const rPct=Math.min(parseFloat(document.getElementById('riskPct').value)||10,10)/100;
+  const entry=parseFloat(document.getElementById('entryP').value);
+  const sl=parseFloat(document.getElementById('slP').value);
+  const inr=parseFloat(document.getElementById('inrRate').value)||85;
+  const atrMult=parseFloat(document.getElementById('atrMult').value)||1.5;
+  const rc=bank*rPct, rcUSD=rc/inr;
+  document.getElementById('rc').textContent='₹'+rc.toFixed(0);
+  document.getElementById('rcusd').textContent='$'+rcUSD.toFixed(2);
+  // ATR SL suggestion
+  if(atrLive&&entry){
+    const eth24h=parseFloat(document.getElementById('eth24h').dataset.val||0);
+    const dir=sl&&sl<entry?'Long':'Short';
+    const atrSlVal=atrSL(entry,dir,atrMult);
+    document.getElementById('atrSlSug').textContent='$'+atrSlVal.toFixed(2)+' ('+atrMult+'×ATR=$'+atrLive.toFixed(2)+')';
+    document.getElementById('atrSlSug').className='rv purple';
+  } else {
+    document.getElementById('atrSlSug').textContent=atrLive?'Enter a price to calculate':'ATR loading...';
+  }
+  if(entry&&sl&&entry!==sl){
+    const diff=Math.abs(entry-sl), isLong=sl<entry;
+    const size=rcUSD/diff, notional=size*entry*25;
+    const tp1=isLong?entry+diff:entry-diff, tp2=isLong?entry+diff*2:entry-diff*2;
+    document.getElementById('diff').textContent='$'+diff.toFixed(2);
+    document.getElementById('posSize').textContent=size.toFixed(4)+' ETH';
+    document.getElementById('notional').textContent='$'+notional.toFixed(0);
+    document.getElementById('tp1').textContent='$'+tp1.toFixed(2);
+    document.getElementById('tp2').textContent='$'+tp2.toFixed(2);
+  }
+}
+
+// ── Trade Log ──────────────────────────────────────────────
+function logTrade(){
+  const strat=document.getElementById('logStrat').value;
+  const dir=document.getElementById('logDir').value;
+  const entry=parseFloat(document.getElementById('logEntry').value);
+  const exit=parseFloat(document.getElementById('logExit').value)||null;
+  const size=parseFloat(document.getElementById('logSize').value)||null;
+  const note=document.getElementById('logNote').value.trim();
+  if(!entry){alert('Entry price required');return;}
+  const pnlUSD=exit&&size?((exit-entry)*(dir==='Long'?1:-1)*size*25):null;
+  const pnlINR=pnlUSD?pnlUSD*(parseFloat(document.getElementById('inrRate').value)||85):null;
+  tradeLog.unshift({time:new Date().toLocaleTimeString('en-IN'),strat,dir,entry,exit,size,note,pnlUSD,pnlINR});
+  renderLog();
+  // clear inputs
+  ['logEntry','logExit','logSize','logNote'].forEach(id=>document.getElementById(id).value='');
+}
+function clearLog(){if(confirm('Clear all log entries?')){tradeLog=[];renderLog();}}
+function renderLog(){
+  const el=document.getElementById('logEntries');
+  if(!tradeLog.length){el.innerHTML='<div class="log-empty">No trades logged this session.</div>';return;}
+  el.innerHTML=tradeLog.map(t=>{
+    const pnlStr=t.pnlUSD!==null
+      ?`<span class="log-pnl ${t.pnlUSD>=0?'green':'red'}">${t.pnlUSD>=0?'+':''}$${t.pnlUSD.toFixed(2)} / ₹${Math.abs(t.pnlINR).toFixed(0)}</span>`
+      :'<span class="log-pnl gray">Open</span>';
+    const exitStr=t.exit?` → $${t.exit}`:' (open)';
+    return `<div class="log-entry">
+      <span class="log-time">${t.time}</span>
+      <span class="log-text"><strong>${t.strat}</strong> <span class="${t.dir==='Long'?'green':'red'}">${t.dir}</span> @$${t.entry}${exitStr} ${t.size?t.size+'ETH':''} ${t.note?'· '+t.note:''}</span>
+      ${pnlStr}
+    </div>`;
+  }).join('');
+}
+
+// ── Main Fetch ─────────────────────────────────────────────
+async function fetchAllData(){
+  try {
+    const [ethT,btcT]=await Promise.all([fetchDeltaTicker('ETHUSD'),fetchDeltaTicker('BTCUSD')]);
+    const ethPrice=parseFloat(ethT.close||ethT.mark_price);
+    const btcPrice=parseFloat(btcT.close||btcT.mark_price);
+    const eth24h=parseFloat(ethT.price_change_percent||0);
+    const btc24h=parseFloat(btcT.price_change_percent||0);
+    const ethH=parseFloat(ethT.high||0), ethL=parseFloat(ethT.low||0);
+    if(!sessionOpenPrice) sessionOpenPrice=ethPrice;
+    const delta=ethPrice-sessionOpenPrice;
+    document.getElementById('priceRef').textContent=`From $${sessionOpenPrice.toFixed(0)}: ${delta>=0?'▲':'▼'} $${Math.abs(delta).toFixed(2)} this session`;
+    ethLive=ethPrice; btcLive=btcPrice;
+    document.getElementById('ethPrice').textContent='$'+ethPrice.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('btcPrice').textContent='$'+btcPrice.toLocaleString('en-US',{maximumFractionDigits:0});
+    const e24=document.getElementById('eth24h');
+    e24.textContent=(eth24h>=0?'▲':'▼')+' '+Math.abs(eth24h).toFixed(2)+'% (24h)';
+    e24.className='sub '+(eth24h>=0?'green':'red'); e24.dataset.val=eth24h;
+    const b24=document.getElementById('btc24h');
+    b24.textContent=(btc24h>=0?'▲':'▼')+' '+Math.abs(btc24h).toFixed(2)+'% (24h)';
+    b24.className='sub '+(btc24h>=0?'green':'red');
+    if(ethH&&ethL) document.getElementById('ethHL').textContent='H: $'+ethH.toFixed(0)+' / L: $'+ethL.toFixed(0);
+    const ratio=ethPrice/btcPrice;
+    document.getElementById('ethBtcRatio').textContent=ratio.toFixed(5);
+    document.getElementById('macro-ratio').textContent=ratio.toFixed(5)+(ratio<ETHBTC_THRESH?' 🔴 MR ZONE':' ✅ Above thresh');
+    document.getElementById('macro-ratio').className='rv '+(ratio<ETHBTC_THRESH?'red':'green');
+    document.getElementById('macro-move').textContent=(eth24h>=0?'+':'')+eth24h.toFixed(2)+'%';
+    document.getElementById('macro-move').className='rv '+(eth24h>=0?'green':'red');
+    if(ratio<=ETHBTC_THRESH){
+      document.getElementById('ethBtcSig').textContent='⚠️ BELOW 0.0285 — MR ZONE ACTIVE';
+      document.getElementById('ethBtcSig').className='sub yellow';
+      document.getElementById('alertMR').style.display='block';
+    } else {
+      document.getElementById('ethBtcSig').textContent='threshold 0.0285 | '+ratio.toFixed(5);
+      document.getElementById('ethBtcSig').className='sub gray';
+      document.getElementById('ethBtcZone').textContent='Δ to trigger: '+((ratio-ETHBTC_THRESH)*10000).toFixed(1)+' bps';
+      document.getElementById('alertMR').style.display='none';
+    }
+    const htfBias=eth24h<-2?'Strong Bear':eth24h<0?'Bearish':eth24h>2?'Strong Bull':'Neutral/Bull';
+    document.getElementById('htf-bias-side').textContent=htfBias+' · verify H4/D1 on TV';
+    document.getElementById('htf-bias-side').className='rv '+(eth24h<0?'red':'green');
+    document.getElementById('dist-ssl').textContent='SSL $'+SSL_LEVEL+': '+((ethPrice/SSL_LEVEL-1)*100).toFixed(1)+'% away';
+    document.getElementById('dist-bsl').textContent='BSL $'+BSL1+': '+((BSL1/ethPrice-1)*100).toFixed(1)+'% away';
+    document.getElementById('statusDot').innerHTML='⬤ <span style="color:#22c55e">Delta Live</span>';
+    document.getElementById('lastUpdate').textContent='⟳ '+new Date().toLocaleTimeString('en-IN')+' IST';
+    document.getElementById('apiStatus').textContent='✅ Connected — Delta Exchange India · 5s candles · WS ~1s';
+    fetchCandleData(ethPrice);
+  } catch(e){
+    document.getElementById('apiStatus').textContent='❌ Delta error: '+e.message+' — CoinGecko fallback...';
+    fetchCoinGeckoFallback();
+  }
+  fetchFNG();
+  fetchFunding();
+  fetchOI();
+}
+
+async function fetchCandleData(price){
+  try {
+    const [c5m,c1h,c4h,c1d]=await Promise.all([
+      fetchDeltaCandles('ETHUSD','5m',100),
+      fetchDeltaCandles('ETHUSD','1h',260),
+      fetchDeltaCandles('ETHUSD','4h',100),
+      fetchDeltaCandles('ETHUSD','1d',60)
+    ]);
+    // H1 scalp + ATR + RSI
+    if(c1h.length>=35){
+      const closes=c1h.map(c=>parseFloat(c.close));
+      renderMACDUI(computeMACD(closes),computeMA(closes,200),price);
+      renderATR(c1h,price);
+      const h1rsi=computeRSI(closes,14);
+      const h1rsiEl=document.getElementById('h1-rsi-val');
+      if(h1rsiEl&&h1rsi!==null){
+        h1rsiEl.textContent='RSI '+h1rsi.toFixed(1);
+        h1rsiEl.className='sub '+(h1rsi<30?'green':h1rsi>70?'red':h1rsi>50?'yellow':'');
+      }
+    }
+    // 4h + 1d ATR for multi-TF SL suggestions
+    const atr4h=computeATR(c4h,14);
+    const atr1d=computeATR(c1d,14);
+    const atrSugEl=document.getElementById('atrSlSug');
+    if(atrSugEl&&price){
+      const a1=atrLive?'Scalp: $'+(price-atrLive).toFixed(2)+' (1×H1)':'—';
+      const a4=atr4h?'Swing: $'+(price-atr4h*1.5).toFixed(0)+' (1.5×H4)':'—';
+      const ad=atr1d?'Pos: $'+(price-atr1d*2).toFixed(0)+' (2×D1)':'—';
+      atrSugEl.textContent=a1+'  |  '+a4+'  |  '+ad;
+    }
+    // 5m
+    const tf5m=analyseCandles(c5m,false);
+    if(tf5m){
+      macd5m.cross=tf5m.macd?tf5m.macd.cross:null; macd5m.bearish=tf5m.macd?tf5m.macd.bearish:null;
+      macd5m.ma50=tf5m.ma50; macd5m.aboveMA50=tf5m.aboveMA50; macd5m.rsi=tf5m.rsi;
+      renderTFBadge('qs',tf5m);
+    }
+    // 4h
+    const tf4h=analyseCandles(c4h,false);
+    if(tf4h){
+      macd4h.cross=tf4h.macd?tf4h.macd.cross:null; macd4h.bearish=tf4h.macd?tf4h.macd.bearish:null;
+      macd4h.ma50=tf4h.ma50; macd4h.aboveMA50=tf4h.aboveMA50; macd4h.rsi=tf4h.rsi;
+      renderTFBadge('sw',tf4h);
+    }
+    // 1d
+    const tf1d=analyseCandles(c1d,true);
+    if(tf1d){
+      macd1d.cross=tf1d.macd?tf1d.macd.cross:null; macd1d.bearish=tf1d.macd?tf1d.macd.bearish:null;
+      macd1d.ma200=tf1d.ma200; macd1d.aboveMA200=tf1d.aboveMA200; macd1d.rsi=tf1d.rsi;
+      renderTFBadge('pos',tf1d);
+    }
+    renderVolUI(computeVolRatio(c1h,c1d));
+    renderMTF();
+    evaluateSetups();
+  } catch(e){
+    document.getElementById('macdStatus').textContent='Candle error — check network';
+    evaluateSetups();
+  }
+}
+
+async function fetchCoinGeckoFallback(){
+  try {
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin&vs_currencies=usd&include_24hr_change=true');
+    const d=await r.json();
+    ethLive=d.ethereum.usd; btcLive=d.bitcoin.usd;
+    document.getElementById('ethPrice').textContent='$'+ethLive.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('btcPrice').textContent='$'+btcLive.toLocaleString('en-US',{maximumFractionDigits:0});
+    const eth24h=d.ethereum.usd_24h_change;
+    const e24=document.getElementById('eth24h');
+    e24.textContent=(eth24h>=0?'▲':'▼')+' '+Math.abs(eth24h).toFixed(2)+'% (24h)';
+    e24.className='sub '+(eth24h>=0?'green':'red'); e24.dataset.val=eth24h;
+    const ratio=ethLive/btcLive;
+    document.getElementById('ethBtcRatio').textContent=ratio.toFixed(5);
+    document.getElementById('dist-ssl').textContent='SSL $'+SSL_LEVEL+': '+((ethLive/SSL_LEVEL-1)*100).toFixed(1)+'% away';
+    document.getElementById('dist-bsl').textContent='BSL $'+BSL1+': '+((BSL1/ethLive-1)*100).toFixed(1)+'% away';
+    document.getElementById('statusDot').innerHTML='⬤ <span style="color:#eab308">CoinGecko Fallback</span>';
+    document.getElementById('lastUpdate').textContent='⟳ '+new Date().toLocaleTimeString('en-IN')+' IST';
+    if(!sessionOpenPrice) sessionOpenPrice=ethLive;
+    evaluateSetups();
+  } catch(e2){document.getElementById('apiStatus').textContent='❌ Both APIs failed.';}
+}
+
+async function fetchFNG(){
+  try {
+    const r=await fetch('https://api.alternative.me/fng/?limit=1');
+    const d=await r.json();
+    const val=parseInt(d.data[0].value), cls=d.data[0].value_classification;
+    fngLive=val;
+    const el=document.getElementById('fngVal');
+    el.textContent=val;
+    document.getElementById('fngClass').textContent=cls;
+    document.getElementById('macro-fng').textContent=val+' – '+cls;
+    if(val<25){el.className='val red';document.getElementById('alertFNG').style.display='block';document.getElementById('fngSignal').textContent='⚠️ Extreme Fear — no new longs';document.getElementById('fngSignal').className='sub red';}
+    else if(val<45){el.className='val yellow';document.getElementById('alertFNG').style.display='none';document.getElementById('fngSignal').textContent='Fear — cautious';document.getElementById('fngSignal').className='sub yellow';}
+    else{el.className='val green';document.getElementById('alertFNG').style.display='none';document.getElementById('fngSignal').textContent='Neutral / Greed';document.getElementById('fngSignal').className='sub green';}
+    document.getElementById('macro-fng').className='rv '+(val<25?'red':val<45?'yellow':'green');
+    evaluateSetups();
+  } catch(e){}
+}
+
+// ── Boot ───────────────────────────────────────────────────
+fetchAllData();
+setInterval(()=>fetchAllData(), 5000);
+setInterval(()=>fetchFNG(), 60000);
+setInterval(()=>{fetchFunding();fetchOI();}, 30000);
+calcSize();
+connectWebSocket();
+
+function connectWebSocket(){
+  let ws;
+  try{ws=new WebSocket('wss://socket.india.delta.exchange');}
+  catch(e){document.getElementById('statusDot').innerHTML='⬤ <span style="color:#eab308">WS unavailable</span>';return;}
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({type:'subscribe',payload:{channels:[
+      {name:'mark_price',symbols:['ETHUSD','BTCUSD']},
+      {name:'ticker_30s',symbols:['ETHUSD','BTCUSD']}
+    ]}}));
+    document.getElementById('apiStatus').textContent='✅ WebSocket live — price ~1s · MACD/ATR 5s · Funding 30s · F&G 60s';
+    document.getElementById('statusDot').innerHTML='● <span style="color:#22c55e">Delta WS Live</span>';
+  };
+  ws.onmessage=(event)=>{
+    try {
+      const msg=JSON.parse(event.data), sym=msg.symbol, price=parseFloat(msg.price||msg.mark_price);
+      if(!price||isNaN(price)) return;
+      if(sym==='ETHUSD'){
+        ethLive=price;
+        document.getElementById('ethPrice').textContent='$'+price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString('en-IN')+' IST';
+        if(btcLive){
+          const ratio=price/btcLive;
+          document.getElementById('ethBtcRatio').textContent=ratio.toFixed(5);
+          if(ratio<=ETHBTC_THRESH){document.getElementById('ethBtcSig').textContent='⚠️ BELOW 0.0285 — MR ZONE ACTIVE';document.getElementById('ethBtcSig').className='sub yellow';document.getElementById('alertMR').style.display='block';}
+          else{document.getElementById('ethBtcSig').textContent='threshold: 0.0285 | '+ratio.toFixed(5);document.getElementById('ethBtcSig').className='sub gray';document.getElementById('ethBtcZone').textContent='Δ to trigger: '+((ratio-ETHBTC_THRESH)*10000).toFixed(1)+' bps';document.getElementById('alertMR').style.display='none';}
+          document.getElementById('macro-ratio').textContent=ratio.toFixed(5)+(ratio<=ETHBTC_THRESH?' 🔴 MR ZONE':' ✅ Above');
+          document.getElementById('macro-ratio').className='rv '+(ratio<=ETHBTC_THRESH?'red':'green');
+        }
+        document.getElementById('dist-ssl').textContent='SSL $'+SSL_LEVEL+': '+((price/SSL_LEVEL-1)*100).toFixed(1)+'% away';
+        document.getElementById('dist-bsl').textContent='BSL $'+BSL1+': '+((BSL1/price-1)*100).toFixed(1)+'% away';
+      }
+      if(sym==='BTCUSD'){btcLive=price;document.getElementById('btcPrice').textContent='$'+price.toLocaleString('en-US',{maximumFractionDigits:0});}
+    } catch(e){}
+  };
+  ws.onerror=()=>{document.getElementById('statusDot').innerHTML='● <span style="color:#eab308">WS error — REST fallback</span>';};
+  ws.onclose=()=>{document.getElementById('statusDot').innerHTML='● <span style="color:#eab308">WS closed — reconnecting...</span>';setTimeout(connectWebSocket,3000);};
+}
+</script>
+</body>
+</html>
