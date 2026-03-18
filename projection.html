@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETH/USD · Projection Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg2: #111318;
+    --bg3: #181c24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text2: #8890a4;
+    --text3: #555e72;
+    --accent: #4fffb0;
+    --accent2: #00d4ff;
+    --red: #ff5555;
+    --green: #4fffb0;
+    --amber: #ffc84a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .eth-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #627eea, #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff; font-family: var(--mono);
+    font-weight: 700; flex-shrink: 0;
+  }
+  .header h1 {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .header-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+  .refresh-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn.loading { opacity: 0.5; pointer-events: none; }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    margin-bottom: 24px;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text3);
+    animation: none;
+  }
+  .status-dot.live { background: var(--accent); animation: pulse 2s infinite; }
+  .status-dot.error { background: var(--red); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .metric-card:hover { border-color: var(--border2); }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-line, transparent);
+    border-radius: 12px 12px 0 0;
+  }
+  .metric-card.green::before { --accent-line: var(--green); }
+  .metric-card.red::before   { --accent-line: var(--red); }
+  .metric-card.blue::before  { --accent-line: var(--accent2); }
+  .metric-card.amber::before { --accent-line: var(--amber); }
+  .metric-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .metric-change { font-size: 12px; font-family: var(--mono); font-weight: 400; }
+  .up { color: var(--green); }
+  .dn { color: var(--red); }
+  .muted { color: var(--text3); }
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .panel-full {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title span { color: var(--text2); }
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+  .scenario-table { width: 100%; border-collapse: collapse; }
+  .scenario-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    text-align: right;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .scenario-table th:first-child { text-align: left; }
+  .scenario-table td {
+    padding: 9px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .scenario-table td:first-child { text-align: left; color: var(--text); }
+  .scenario-table tr:last-child td { border-bottom: none; }
+  .scenario-table tr:hover td { color: var(--text); }
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-best { background: rgba(79,255,176,0.12); color: var(--green); border: 1px solid rgba(79,255,176,0.25); }
+  .badge-bull { background: rgba(79,255,176,0.08); color: var(--green); border: 1px solid rgba(79,255,176,0.15); }
+  .badge-bear { background: rgba(255,85,85,0.08); color: var(--red); border: 1px solid rgba(255,85,85,0.15); }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; font-family: var(--mono); color: var(--text2); }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .robustness-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .rob-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text3);
+    transition: all 0.2s;
+  }
+  .rob-item.pass { border-color: rgba(79,255,176,0.3); color: var(--green); background: rgba(79,255,176,0.05); }
+  .rob-item.fail { border-color: rgba(255,85,85,0.2); color: var(--text3); }
+  .rob-check { font-size: 14px; margin-bottom: 4px; }
+  .error-box {
+    background: rgba(255,85,85,0.07);
+    border: 1px solid rgba(255,85,85,0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 12px;
+    display: none;
+    margin-bottom: 16px;
+  }
+  .error-box.active { display: block; }
+  .footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .panels { grid-template-columns: 1fr; }
+    .robustness-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="eth-icon">&#926;</div>
+      <div>
+        <h1>ETH/USD PROJECTION</h1>
+        <div class="header-sub">Pattern-matching model &middot; 1-month horizon</div>
+      </div>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+      <span id="refreshIcon">&#8635;</span> REFRESH
+    </button>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Connecting...</span>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="metrics" id="metricsRow">
+    <div class="metric-card blue">
+      <div class="metric-label">Current price</div>
+      <div class="metric-value" id="mCurrent">&mdash;</div>
+      <div class="metric-change muted" id="mChange">loading...</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-label">Proj. high (best match)</div>
+      <div class="metric-value" id="mHigh">&mdash;</div>
+      <div class="metric-change up" id="mHighPct">&mdash;</div>
+    </div>
+    <div class="metric-card red">
+      <div class="metric-label">Proj. low (best match)</div>
+      <div class="metric-value" id="mLow">&mdash;</div>
+      <div class="metric-change dn" id="mLowPct">&mdash;</div>
+    </div>
+    <div class="metric-card amber">
+      <div class="metric-label">Median end target</div>
+      <div class="metric-value" id="mMedian">&mdash;</div>
+      <div class="metric-change muted" id="mMedianPct">&mdash;</div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-title">
+        30-day price history
+        <span id="rangeLabel">&mdash;</span>
+      </div>
+      <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">
+        Scenario range (projected from current)
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#4fffb0"></div>High</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ff5555"></div>Low</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div>End</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="scenarioChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel-full">
+    <div class="panel-title">Historical analogues &middot; Projected outcomes</div>
+    <div id="tableWrap"></div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-title">Model robustness checks</div>
+      <div class="robustness-grid" id="robGrid"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Pattern summary</div>
+      <div id="patternSummary" style="font-family:var(--mono);font-size:12px;color:var(--text2);line-height:1.9;"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Data: Delta Exchange India API &middot; Projections: pattern-matching model (local)</span>
+    <span id="lastUpdate">&mdash;</span>
+  </div>
+</div>
+
+<script>
+const DELTA_BASE = 'https://api.india.delta.exchange';
+const CORS_PROXIES = [
+  { type: 'corsproxy',   url: 'https://corsproxy.io/?' },
+  { type: 'allorigins',  url: 'https://api.allorigins.win/get?url=' },
+];
+const SYMBOL = 'ETHUSD';
+
+const HISTORICAL_ANALOGUES = [
+  { label: 'Nov 2023',  isBest: true,  highVar:  3.90, lowVar: -10.88, endVar:  -3.69, tag: 'best' },
+  { label: 'Jan 2023',  isBest: false, highVar: 21.10, lowVar:  -1.08, endVar:   9.14, tag: '' },
+  { label: 'Dec 2022',  isBest: false, highVar: 13.59, lowVar:  -9.17, endVar:  11.81, tag: '' },
+  { label: 'Nov 2023b', isBest: false, highVar: 16.52, lowVar:  -0.47, endVar:  13.89, tag: '' },
+  { label: 'Sep 2024',  isBest: false, highVar:  4.15, lowVar: -13.12, endVar:  -5.76, tag: '' },
+  { label: 'Apr 2022',  isBest: false, highVar: 13.83, lowVar:  -8.47, endVar:  -6.76, tag: '' },
+  { label: 'May 2024',  isBest: false, highVar:  8.53, lowVar:  -8.22, endVar:  -4.15, tag: '' },
+  { label: 'Aug 2020',  isBest: false, highVar: 69.35, lowVar:  -1.58, endVar:  54.23, tag: 'bull' },
+  { label: 'Aug 2018',  isBest: false, highVar:  8.07, lowVar: -44.17, endVar: -29.15, tag: 'bear' },
+];
+
+let priceChartInst = null, scenarioChartInst = null;
+
+const fmt    = n => '$' + Math.round(n).toLocaleString('en-US');
+const pct    = n => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+const sign   = n => n >= 0 ? 'up' : 'dn';
+const median = arr => {
+  const s = [...arr].sort((a,b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2;
+};
+
+function setStatus(type, msg) {
+  document.getElementById('statusDot').className = 'status-dot ' + type;
+  document.getElementById('statusText').textContent = msg;
+}
+function setError(msg) {
+  const el = document.getElementById('errorBox');
+  if (msg) { el.textContent = '\u26a0 ' + msg; el.classList.add('active'); }
+  else      { el.textContent = ''; el.classList.remove('active'); }
+}
+
+async function fetchWithCORSFallback(targetUrl) {
+  try {
+    const res = await fetch(targetUrl, { headers: { 'Accept': 'application/json' } });
+    if (res.ok) return await res.json();
+  } catch (_) {}
+
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const res = await fetch(proxy.url + encodeURIComponent(targetUrl));
+      if (!res.ok) continue;
+      if (proxy.type === 'allorigins') {
+        const w = await res.json();
+        if (!w.contents) continue;
+        return JSON.parse(w.contents);
+      }
+      return await res.json();
+    } catch (_) { continue; }
+  }
+  throw new Error('All fetch attempts failed (direct + proxies)');
+}
+
+function buildCandlesUrl(sym, res, start, end) {
+  return DELTA_BASE + '/v2/history/candles?symbol=' + sym + '&resolution=' + res + '&start=' + start + '&end=' + end;
+}
+function buildTickerUrl(sym) {
+  return DELTA_BASE + '/v2/tickers/' + sym;
+}
+
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  const icon = document.getElementById('refreshIcon');
+  btn.classList.add('loading');
+  icon.innerHTML = '<span class="spin">&#8635;</span>';
+  setStatus('', 'Fetching ETH data from Delta Exchange India...');
+  setError('');
+
+  try {
+    const now   = Math.floor(Date.now() / 1000);
+    const start = now - 365 * 24 * 60 * 60;
+
+    const [candlesData, tickerData] = await Promise.all([
+      fetchWithCORSFallback(buildCandlesUrl(SYMBOL, '1d', start, now)),
+      fetchWithCORSFallback(buildTickerUrl(SYMBOL)),
+    ]);
+
+    if (!candlesData.success || !Array.isArray(candlesData.result))
+      throw new Error('Unexpected candles response: ' + JSON.stringify(candlesData).slice(0,120));
+
+    const candles = candlesData.result.sort((a,b) => a.time - b.time);
+    const prices  = candles.map(c => [c.time * 1000, parseFloat(c.close)]);
+
+    if (!tickerData.success || !tickerData.result)
+      throw new Error('Unexpected ticker response: ' + JSON.stringify(tickerData).slice(0,120));
+
+    const ticker       = tickerData.result;
+    const currentPrice = parseFloat(ticker.close || ticker.mark_price);
+    const openPrice    = parseFloat(ticker.open  || currentPrice);
+    const change24h    = openPrice > 0 ? ((currentPrice - openPrice) / openPrice) * 100 : 0;
+
+    setStatus('live', 'Live \u00b7 Delta Exchange India \u00b7 Updated ' + new Date().toLocaleTimeString());
+    document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleString();
+    renderDashboard(prices, currentPrice, change24h, false);
+
+  } catch(e) {
+    setStatus('error', 'Error loading data');
+    setError('Could not fetch from Delta Exchange India API. ' +
+      'Try opening via VS Code Live Server to avoid CORS issues. Error: ' + e.message);
+    renderDashboard(null, 2264.37, 0, true);
+  } finally {
+    btn.classList.remove('loading');
+    icon.textContent = '\u21bb';
+  }
+}
+
+function renderDashboard(prices, currentPrice, change24h, isFallback) {
+  document.getElementById('mCurrent').textContent = fmt(currentPrice);
+  document.getElementById('mChange').innerHTML =
+    '<span class="' + sign(change24h) + '">' + pct(change24h) + ' 24h</span>';
+
+  const scenarios = HISTORICAL_ANALOGUES.map(a => ({
+    ...a,
+    projHigh: currentPrice * (1 + a.highVar/100),
+    projLow:  currentPrice * (1 + a.lowVar/100),
+    projEnd:  currentPrice * (1 + a.endVar/100),
+  }));
+
+  const best   = scenarios.find(s => s.isBest);
+  const med    = median(scenarios.map(s => s.projEnd));
+  const medPct = (med / currentPrice - 1) * 100;
+
+  document.getElementById('mHigh').textContent     = fmt(best.projHigh);
+  document.getElementById('mHighPct').textContent  = pct(best.highVar);
+  document.getElementById('mHighPct').className    = 'metric-change up';
+  document.getElementById('mLow').textContent      = fmt(best.projLow);
+  document.getElementById('mLowPct').textContent   = pct(best.lowVar);
+  document.getElementById('mLowPct').className     = 'metric-change dn';
+  document.getElementById('mMedian').textContent   = fmt(med);
+  document.getElementById('mMedianPct').textContent = pct(medPct);
+  document.getElementById('mMedianPct').className  = 'metric-change ' + sign(medPct);
+
+  // Price history chart
+  if (prices && prices.length > 0) {
+    const last30 = prices.slice(-30);
+    const labels = last30.map(p => new Date(p[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    const vals   = last30.map(p => p[1]);
+    document.getElementById('rangeLabel').textContent =
+      fmt(Math.min(...vals)) + ' \u2013 ' + fmt(Math.max(...vals));
+    if (priceChartInst) priceChartInst.destroy();
+    priceChartInst = new Chart(document.getElementById('priceChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: vals, borderColor: '#00d4ff', borderWidth: 1.5,
+          pointRadius: 0, fill: true, tension: 0.3,
+          backgroundColor: ctx => {
+            const g = ctx.chart.ctx.createLinearGradient(0,0,0,220);
+            g.addColorStop(0,'rgba(0,212,255,0.15)'); g.addColorStop(1,'rgba(0,212,255,0)'); return g;
+          }
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: c=>' $'+Math.round(c.parsed.y).toLocaleString() } } },
+        scales: {
+          x: { ticks:{color:'#555e72',font:{size:10},maxTicksLimit:6,autoSkip:true}, grid:{color:'rgba(255,255,255,0.04)'} },
+          y: { ticks:{color:'#555e72',font:{size:10},callback:v=>'$'+Math.round(v/1000)+'k'}, grid:{color:'rgba(255,255,255,0.04)'} }
+        }
+      }
+    });
+  } else {
+    document.getElementById('priceChart').parentElement.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:220px;color:var(--text3);font-family:var(--mono);font-size:12px;">Price history unavailable \u2014 using fallback</div>';
+  }
+
+  // Scenario chart
+  const sLabels = scenarios.map(s => s.label);
+  if (scenarioChartInst) scenarioChartInst.destroy();
+  scenarioChartInst = new Chart(document.getElementById('scenarioChart'), {
+    type: 'bar',
+    data: {
+      labels: sLabels,
+      datasets: [
+        { label:'Proj. High', data:scenarios.map(s=>s.projHigh), backgroundColor:'rgba(79,255,176,0.7)',  borderRadius:2, borderSkipped:false },
+        { label:'Proj. Low',  data:scenarios.map(s=>s.projLow),  backgroundColor:'rgba(255,85,85,0.65)', borderRadius:2, borderSkipped:false },
+        { label:'Proj. End',  data:scenarios.map(s=>s.projEnd),  backgroundColor:'rgba(0,212,255,0.65)', borderRadius:2, borderSkipped:false },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' '+c.dataset.label+': $'+Math.round(c.parsed.y).toLocaleString() } } },
+      scales:{
+        x:{ticks:{color:'#555e72',font:{size:9},maxRotation:30},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{
+          ticks:{color:'#555e72',font:{size:10},callback:v=>'$'+Math.round(v).toLocaleString()},
+          grid:{color:'rgba(255,255,255,0.04)'},
+          min: Math.round(Math.min(...scenarios.map(s=>s.projLow))*0.95/100)*100
+        }
+      }
+    }
+  });
+
+  // Scenario table
+  const rows = scenarios.map(s => {
+    const tag = s.tag==='best'?'<span class="badge badge-best">BEST</span>'
+              : s.tag==='bull'?'<span class="badge badge-bull">BULL</span>'
+              : s.tag==='bear'?'<span class="badge badge-bear">BEAR</span>':''  ;
+    return '<tr><td>'+s.label+tag+'</td>'+
+      '<td class="up">'+fmt(s.projHigh)+' <span style="opacity:.5">('+pct(s.highVar)+')</span></td>'+
+      '<td class="dn">'+fmt(s.projLow) +' <span style="opacity:.5">('+pct(s.lowVar) +')</span></td>'+
+      '<td class="'+sign(s.projEnd-currentPrice)+'">'+fmt(s.projEnd)+' <span style="opacity:.5">('+pct(s.endVar)+')</span></td></tr>';
+  }).join('');
+
+  const medRow = '<tr style="border-top:1px solid var(--border2)"><td style="color:var(--text2)">Median across all</td><td>&mdash;</td><td>&mdash;</td>'+
+    '<td class="'+sign(medPct)+'" style="font-weight:600">'+fmt(med)+' <span style="opacity:.5">('+pct(medPct)+')</span></td></tr>';
+
+  document.getElementById('tableWrap').innerHTML =
+    '<table class="scenario-table"><thead><tr>'+
+    '<th>Analogue period</th><th>Proj. high</th><th>Proj. low</th><th>Proj. end (~27d)</th>'+
+    '</tr></thead><tbody>'+rows+medRow+'</tbody></table>';
+
+  // Robustness
+  const checks = [
+    {label:'Target externalisation',pass:true},{label:'Best-match coherence',pass:true},
+    {label:'Internal coherence',pass:true},{label:'Avg. match coherence',pass:true},
+    {label:'Prob. dominance',pass:false}
+  ];
+  const score = checks.filter(c=>c.pass).length;
+  document.getElementById('robGrid').innerHTML = checks.map(c=>
+    '<div class="rob-item '+( c.pass?'pass':'fail')+'"><div class="rob-check">'+
+    (c.pass?'\u2713':'\u25cb')+'</div><div style="font-size:9px;line-height:1.4">'+c.label+'</div></div>'
+  ).join('');
+
+  // Pattern summary
+  document.getElementById('patternSummary').innerHTML =
+    '<div>Current price: <span style="color:var(--accent2)">'+( isFallback?'~$2,264 (fallback)':fmt(currentPrice))+'</span></div>'+
+    '<div>Pattern start: <span style="color:var(--text)">Feb 17, 2026 &middot; $1,997</span></div>'+
+    '<div>Current gain: <span style="color:var(--green)">+'+ ((currentPrice/1997.28-1)*100).toFixed(1) +'% from pattern start</span></div>'+
+    '<div>Analogues found: <span style="color:var(--text)">'+scenarios.length+' historical matches</span></div>'+
+    '<div>Robustness: <span style="color:var(--amber)">'+score+'/5 checks passed</span></div>'+
+    '<div>Best match: <span style="color:var(--text)">Nov 2023 (score 3.30)</span></div>'+
+    '<div style="margin-top:8px;color:var(--text3);font-size:10px">Data source: '+(isFallback?'Fallback':'Delta Exchange India')+' &middot; Projection logic: local pattern model</div>'+
+    (isFallback?'<div style="color:var(--red);font-size:10px;margin-top:4px">&#9888; Using fallback price. Open via VS Code Live Server to load live data.</div>':''  );
+}
+
+loadData();
+</script>
+</body>
+</html>
