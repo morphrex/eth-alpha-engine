@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>HTF Liquidity Engine v3 — Delta Exchange</title>
 <style>
   :root {
@@ -11,7 +11,8 @@
     --orange:#ff6b35;--text:#cdd6e8;--dim:#5a6a85;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace;font-size:13px;min-height:100vh;}
+  html{overflow-x:hidden;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',monospace;font-size:13px;min-height:100vh;overflow-x:hidden;}
 
   /* HEADER */
   .header{background:linear-gradient(135deg,#0f1520,#0a1628);border-bottom:1px solid var(--border);
@@ -244,6 +245,53 @@
     .session-grid{grid-template-columns:1fr;}
     .bias-row{grid-template-columns:1fr 1fr;}
     .logo-text h1{font-size:13px;}
+  }
+
+  /* ── TOUCH-FRIENDLY BUTTONS ── */
+  button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+    touch-action: manipulation;
+  }
+  /* Override for small utility buttons that intentionally stay compact */
+  .btn-sm { min-height: 32px; min-width: 32px; padding: 4px 10px; font-size: 11px; }
+  .refresh-btn { min-height: 28px; min-width: 28px; padding: 0 4px; font-size: 14px; }
+
+  /* ── MOBILE-FIRST LAYOUT ── */
+  @media (max-width: 1024px) {
+    .grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 8px;
+      height: auto;
+    }
+    .left-col, .center-col, .right-col {
+      width: 100%;
+      overflow: visible;
+    }
+    .panel {
+      max-height: none;
+      overflow-y: auto;
+    }
+    body { font-size: 12px; }
+    .panel-body { padding: 10px; }
+    .header { padding: 8px 12px; flex-wrap: wrap; }
+    .header-right { gap: 10px; margin-top: 6px; }
+    .ticker-inner { animation: scroll 60s linear infinite; }
+    .strategy-monitor { flex-direction: column; gap: 12px; }
+    #checklist, .risk-panel { font-size: 12px; }
+    .rec-title, .rec-field-val { font-size: 14px; }
+    /* Options panel — constrain height so it doesn't eat the whole screen */
+    .options-panel { max-height: 60vh; }
+  }
+
+  /* ── EXTRA-SMALL PHONES (iPhone SE, etc.) ── */
+  @media (max-width: 480px) {
+    .ticker-item { padding: 0 12px; font-size: 10px; }
+    .session-badge, .candle-badge { font-size: 9px; padding: 3px 8px; }
+    table th, table td { font-size: 11px; padding: 4px 6px; }
   }
 </style>
 </head>
@@ -811,11 +859,15 @@ function calculateStrategyScores(ohlc){
     (hourEST >= 10 && hourEST < 11) ||  // NY AM Silver Bullet
     (hourEST >= 2  && hourEST < 5);     // London Killzone rough
 
-  // No-session penalty — very mild, just enough to deprioritise vs active-session setups
-  // (was previously 0 — now a tiny -0.5 so active-session scores edge out identical Asia setups)
+  // No-session penalty — advisory, NOT blocking.
+  // Reversal/trap setups (S1, S4) are riskier without a session → heavy penalty.
+  // Continuation (S3) is somewhat valid on strong HTF trend even in Asia → lighter penalty.
+  // S2 (IV breakout) is actually more likely in Asia → no penalty.
   if(!activeSession){
-    scores.S1 -= 0.5;
-    scores.S3 -= 0.5;
+    scores.S1 -= 3;       // heavy: reversal needs session liquidity
+    scores.S4 -= 3;       // heavy: trap needs sweep + session confirmation
+    scores.S3 -= 1.5;     // mild: continuation still valid on strong trend
+    // S2 intentionally unpunished — Asia range → breakout at LDN open is S2's bread & butter
   }
 
   // Asia bonus — range contraction → likely IV expansion / breakout at London open;
@@ -890,17 +942,21 @@ function decideStrategy(scores){
     parseFloat(biasData[document.getElementById('bias-asset').value]?.chg||0)
   );
 
-  // In very strong trend → force continuation priority
+  // Strong-trend override — continuation wins even with session penalty applied.
+  // Uses a lower raw-score floor (3) because penalty may have already been subtracted.
   if(trendStrength > 3.2 && scores.S3 >= 3) return 'S3';
 
-  // Reversal needs higher conviction now
+  // Reversal: threshold unchanged — needs full conviction
   if(scores.S1 >= 6.5) return 'S1';
+
+  // Continuation: threshold reduced from 4.5 → 4.0 so that a session penalty of -1.5
+  // on an otherwise 5.5-point setup (= 4.0 net) still fires rather than going NONE.
+  if(scores.S3 >= 4.0) return 'S3';
+
+  // Trap: unchanged
   if(scores.S4 >= 5)   return 'S4';
 
-  // Continuation next
-  if(scores.S3 >= 4.5) return 'S3';
-
-  // Breakout last
+  // Breakout: unchanged
   if(scores.S2 >= 3)   return 'S2';
 
   return 'NONE';
@@ -1499,13 +1555,33 @@ function toggleCheck(el){
 
 function updateTradeGate(){
   const all  = document.querySelectorAll('#checklist .check-box');
-  const ok   = [...all].every(b=>b.classList.contains('checked'));
-  const fail = [...all].filter(b=>!b.classList.contains('checked')).length;
+
+  // For S3 (FVG Continuation), sweep is NOT a hard requirement —
+  // a clean trend continuation is actually *better* without a recent sweep/fakeout.
+  // So when S3 is the active strategy, skip the sweep check in the gate count.
+  const isS3Active = activeStrategy === 'S3';
+
+  const relevant = [...all].filter(b => {
+    if(isS3Active){
+      // Find the parent check-item to get its data-check key
+      const item = b.closest('[data-check]');
+      if(item && item.getAttribute('data-check') === 'sweep') return false;
+    }
+    return true;
+  });
+
+  const ok   = relevant.every(b => b.classList.contains('checked'));
+  const fail = relevant.filter(b => !b.classList.contains('checked')).length;
   const g = document.getElementById('trade-gate');
   g.className  = 'trade-gate ' + (ok ? 'gate-go' : 'gate-no');
-  g.textContent = ok
-    ? '✅ TRADE READY — All 6 Checks Passed'
-    : '⛔ NO TRADE — ' + fail + ' Check(s) Pending';
+
+  if(isS3Active && ok){
+    g.textContent = '✅ TRADE READY — S3 Checks Passed (Sweep skipped for Continuation)';
+  } else {
+    g.textContent = ok
+      ? '✅ TRADE READY — All Checks Passed'
+      : '⛔ NO TRADE — ' + fail + ' Check(s) Pending';
+  }
 }
 
 function resetChecklist(){
