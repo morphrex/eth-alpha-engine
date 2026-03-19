@@ -605,7 +605,12 @@ let strategyScores = { S1:0, S2:0, S3:0, S4:0 };
 let lastEngineRun = null; // timestamp of last successful engine run
 
 const BASE = 'https://api.india.delta.exchange/v2';
-const PROXY = 'https://api.allorigins.win/get?url=';
+// Proxy cascade: corsproxy.io (most reliable from GH Pages) → codetabs → allorigins fallback
+const PROXIES = [
+  { url: u => `https://corsproxy.io/?${encodeURIComponent(u)}`,  parse: r => r.json() },
+  { url: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, parse: r => r.json() },
+  { url: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, parse: async r => { const j=await r.json(); return JSON.parse(j.contents); } },
+];
 let biasData = {};
 let lastOptionsData = [];
 let allExpiries = [];
@@ -690,23 +695,35 @@ function isNew15mCandle(){
 ══════════════════════════════════════════════════════ */
 async function fetchPublic(path){
   const url = `${BASE}${path}`;
+  // 1. Try direct (works when Delta allows CORS, e.g. local dev or permissive endpoints)
   try{
-    const r = await fetch(url);
+    const r = await fetch(url, {signal: AbortSignal.timeout(5000)});
     if(!r.ok) throw new Error(r.status);
     const j = await r.json();
     setApiStatus(true); return j;
-  }catch{
+  }catch(e){ console.warn('Direct fetch failed, trying proxies…', e.message); }
+
+  // 2. Cascade through proxy list until one works
+  for(let i=0; i<PROXIES.length; i++){
+    const p = PROXIES[i];
     try{
-      const r2 = await fetch(PROXY+encodeURIComponent(url));
-      const j2 = await r2.json();
-      const p = JSON.parse(j2.contents);
-      setApiStatus(true,'proxy'); return p;
-    }catch{setApiStatus(false); return null;}
+      const r = await fetch(p.url(url), {signal: AbortSignal.timeout(8000)});
+      if(!r.ok) throw new Error(`proxy ${i} HTTP ${r.status}`);
+      const j = await p.parse(r);
+      setApiStatus(true, `proxy${i+1}`);
+      return j;
+    }catch(e){ console.warn(`Proxy ${i+1} failed:`, e.message); }
   }
+
+  setApiStatus(false);
+  return null;
 }
 function setApiStatus(ok,mode=''){
   document.getElementById('api-dot').className='dot '+(ok?'dot-green':'dot-red');
-  document.getElementById('api-label').textContent=ok?'Delta API'+(mode?' (proxy)':''):'API Down';
+  const label = ok
+    ? ('Delta API' + (mode==='proxy1'?' (corsproxy)':mode==='proxy2'?' (codetabs)':mode==='proxy3'?' (allorigins)':mode?' (proxy)':''))
+    : 'API Down — all proxies failed';
+  document.getElementById('api-label').textContent=label;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -715,14 +732,21 @@ function setApiStatus(ok,mode=''){
 async function fetchOHLC(){
   const assetKey = document.getElementById('bias-asset').value;
   const symbol = assetKey==='btc'?'BTCUSD':'ETHUSD';
-  const end = Math.floor(Date.now()/1000);
-  const start = end - (20*15*60); // last 20 x 15m candles = 5h
-  const d = await fetchPublic(`/history/candles?resolution=15&symbol=${symbol}&start=${start}&end=${end}`);
+  const end   = Math.floor(Date.now()/1000);
+  const start = end - (20*15*60); // last 20 × 15m candles ≈ 5h
+  // NOTE: Delta Exchange expects resolution as a string ('15m') not a bare integer.
+  // start/end are required Unix timestamps (seconds). limit caps the response size.
+  const path = `/history/candles?symbol=${symbol}&resolution=15m&start=${start}&end=${end}&limit=25`;
+  console.log('Fetching OHLC:', `${BASE}${path}`);
+  const d = await fetchPublic(path);
   if(d && d.result && Array.isArray(d.result)){
     window.lastOHLC = d.result.map(c=>({
       time:c.time, open:parseFloat(c.open), high:parseFloat(c.high),
       low:parseFloat(c.low), close:parseFloat(c.close), volume:parseFloat(c.volume||0)
     })).sort((a,b)=>a.time-b.time);
+    console.log(`OHLC loaded: ${window.lastOHLC.length} candles`);
+  } else {
+    console.warn('OHLC response unexpected:', d);
   }
 }
 
@@ -773,13 +797,35 @@ function calculateStrategyScores(ohlc){
     parseFloat(biasData[document.getElementById('bias-asset').value]?.chg||0)
   );
 
-  // Light session bonus — approximate Silver Bullet / killzone windows (NY time)
+  // ── Session context ──────────────────────────────────
   const now = new Date();
-  const hourEST = (now.getUTCHours() - 5 + 24) % 24; // rough EST
-  const isHighConvictionWindow =
-    (hourEST >= 10 && hourEST < 11) ||   // NY AM Silver Bullet
-    (hourEST >= 2  && hourEST < 5);      // London Killzone rough
+  const gmtH = now.getUTCHours();
+  const gmtMin = gmtH * 60 + now.getUTCMinutes();
+  const hourEST = (gmtH - 5 + 24) % 24; // rough EST offset
 
+  // Asia session: 00:00–07:00 GMT
+  const isAsia = gmtMin >= 0 && gmtMin < 7 * 60;
+
+  // High-conviction killzone windows (NY Silver Bullet + London Killzone)
+  const isHighConvictionWindow =
+    (hourEST >= 10 && hourEST < 11) ||  // NY AM Silver Bullet
+    (hourEST >= 2  && hourEST < 5);     // London Killzone rough
+
+  // No-session penalty — very mild, just enough to deprioritise vs active-session setups
+  // (was previously 0 — now a tiny -0.5 so active-session scores edge out identical Asia setups)
+  if(!activeSession){
+    scores.S1 -= 0.5;
+    scores.S3 -= 0.5;
+  }
+
+  // Asia bonus — range contraction → likely IV expansion / breakout at London open;
+  // continuation pullbacks still valid if HTF trend is intact
+  if(isAsia){
+    scores.S2 += 1;    // IV breakout / range expansion more likely in quiet → LDN transition
+    scores.S3 += 0.5;  // continuation pullbacks can still occur on strong HTF trend
+  }
+
+  // High-conviction killzone boost
   if(isHighConvictionWindow){
     scores.S1 += 0.5;
     scores.S3 += 1;
