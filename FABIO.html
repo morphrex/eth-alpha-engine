@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fabio Live Trader • Delta Exchange Scalper</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Barlow+Condensed:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:  #00e676;
+      --red:    #ff1744;
+      --purple: #d500f9;
+      --gold:   #ffd740;
+      --blue:   #40c4ff;
+      --bg:     #070a0f;
+      --bg2:    #0c0f18;
+      --panel:  #0f1320;
+      --panel2: #141828;
+      --border: #1c2238;
+      --text:   #c8d6f0;
+      --muted:  #4a5580;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Barlow Condensed', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0,230,118,0.03) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(64,196,255,0.04) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      position: relative;
+    }
+    .panel::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    }
+
+    /* ── SIGNAL BOX ─────────────────────────────── */
+    .signal-wrap {
+      padding: 20px 16px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; min-height: 220px;
+      text-align: center;
+    }
+    .signal-label {
+      font-size: 52px; font-weight: 900;
+      letter-spacing: 2px; line-height: 1;
+    }
+    .signal-reason {
+      font-size: 14px; font-weight: 600;
+      letter-spacing: 0.5px; max-width: 280px;
+      font-family: 'JetBrains Mono', monospace;
+      opacity: 0.75;
+    }
+
+    .sig-wait   .signal-label { color: var(--muted); text-shadow: none; }
+    .sig-wait   { border-color: var(--border) !important; }
+
+    .sig-long   .signal-label {
+      color: var(--green);
+      text-shadow: 0 0 30px rgba(0,230,118,0.5), 0 0 60px rgba(0,230,118,0.2);
+      animation: pulse-green 2s infinite;
+    }
+    .sig-long   { border-color: var(--green) !important; box-shadow: 0 0 20px rgba(0,230,118,0.08); }
+
+    .sig-short  .signal-label {
+      color: var(--red);
+      text-shadow: 0 0 30px rgba(255,23,68,0.5), 0 0 60px rgba(255,23,68,0.2);
+      animation: pulse-red 2s infinite;
+    }
+    .sig-short  { border-color: var(--red) !important; box-shadow: 0 0 20px rgba(255,23,68,0.08); }
+
+    .sig-rev-long  .signal-label {
+      color: var(--purple);
+      text-shadow: 0 0 30px rgba(213,0,249,0.5);
+      animation: pulse-purple 2s infinite;
+    }
+    .sig-rev-long  { border-color: var(--purple) !important; box-shadow: 0 0 20px rgba(213,0,249,0.08); }
+
+    .sig-rev-short .signal-label {
+      color: var(--purple);
+      text-shadow: 0 0 30px rgba(213,0,249,0.5);
+      animation: pulse-purple 2s infinite;
+    }
+    .sig-rev-short { border-color: var(--purple) !important; box-shadow: 0 0 20px rgba(213,0,249,0.08); }
+
+    @keyframes pulse-green  { 0%,100%{text-shadow:0 0 30px rgba(0,230,118,.5),0 0 60px rgba(0,230,118,.2)} 50%{text-shadow:0 0 50px rgba(0,230,118,.8),0 0 90px rgba(0,230,118,.35)} }
+    @keyframes pulse-red    { 0%,100%{text-shadow:0 0 30px rgba(255,23,68,.5),0 0 60px rgba(255,23,68,.2)} 50%{text-shadow:0 0 50px rgba(255,23,68,.8),0 0 90px rgba(255,23,68,.35)} }
+    @keyframes pulse-purple { 0%,100%{text-shadow:0 0 30px rgba(213,0,249,.5),0 0 60px rgba(213,0,249,.2)} 50%{text-shadow:0 0 50px rgba(213,0,249,.8),0 0 90px rgba(213,0,249,.35)} }
+
+    /* ── STAT TILES ─────────────────────────────── */
+    .stat-tile {
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-label { font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
+    .stat-value { font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: 0.5px; }
+
+    /* ── HEADER ─────────────────────────────────── */
+    .header-bar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .logo-text {
+      font-size: 22px; font-weight: 900; letter-spacing: 3px;
+      color: var(--gold);
+      text-shadow: 0 0 20px rgba(255,215,64,0.3);
+    }
+    .logo-sub { font-size: 11px; letter-spacing: 1px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+    select, button.ctrl {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
+    select:focus, button.ctrl:focus { outline: 1px solid var(--blue); }
+    button.ctrl-reset {
+      background: rgba(0,230,118,0.1);
+      border: 1px solid rgba(0,230,118,0.3);
+      color: var(--green);
+      border-radius: 4px; padding: 6px 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: background .2s;
+    }
+    button.ctrl-reset:hover { background: rgba(0,230,118,0.2); }
+
+    /* ── STATUS DOT ─────────────────────────────── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .dot-red    { background: var(--red);   box-shadow: 0 0 6px var(--red);   animation: blink 1.2s infinite; }
+    .dot-green  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 1.2s infinite; }
+    .dot-yellow { background: var(--gold);  box-shadow: 0 0 6px var(--gold);  animation: blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── TRADE PLAN ─────────────────────────────── */
+    .trade-row { display:flex; justify-content:space-between; align-items:center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .trade-row:last-child { border-bottom: none; }
+    .trade-key { font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+    .trade-val { font-size: 15px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── ALERT ──────────────────────────────────── */
+    .alert-box {
+      background: rgba(255,23,68,0.12);
+      border: 1px solid rgba(255,23,68,0.4);
+      color: var(--red);
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
+      text-align: center;
+      animation: fadeIn .3s ease;
+    }
+    .alert-info {
+      background: rgba(64,196,255,0.12);
+      border-color: rgba(64,196,255,0.4);
+      color: var(--blue);
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+    /* ── STOP PIPS ──────────────────────────────── */
+    .stop-pip { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+    .stop-used  { background:rgba(255,23,68,.3); border:1px solid var(--red); color:var(--red); }
+    .stop-empty { background:rgba(255,255,255,.06); border:1px solid var(--border); color:var(--muted); }
+
+    /* ── CVD BAR ────────────────────────────────── */
+    .cvd-bar-track { height: 8px; border-radius: 4px; background: var(--border); overflow:hidden; }
+    .cvd-bar-fill  { height: 100%; border-radius: 4px; transition: width .4s ease; }
+
+    /* ── SECTION HEADER ─────────────────────────── */
+    .section-head {
+      font-size: 11px; letter-spacing: 2px; color: var(--muted);
+      text-transform: uppercase; padding: 12px 16px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── TICKER ─────────────────────────────────── */
+    .price-display {
+      font-size: 38px; font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -1px;
+    }
+    .price-up   { color: var(--green); }
+    .price-down { color: var(--red); }
+    .price-flat { color: var(--text); }
+
+    /* ── TAKE TRADE BUTTON ──────────────────────── */
+    .btn-trade {
+      width: 100%; padding: 14px;
+      border-radius: 4px; border: none; cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px; font-weight: 800; letter-spacing: 2px;
+      transition: filter .2s, transform .1s;
+    }
+    .btn-trade:hover { filter: brightness(1.15); }
+    .btn-trade:active { transform: scale(.98); }
+    .btn-long  { background: rgba(0,230,118,.15); border: 1px solid rgba(0,230,118,.4); color: var(--green); }
+    .btn-short { background: rgba(255,23,68,.15);  border: 1px solid rgba(255,23,68,.4);  color: var(--red);   }
+    .btn-wait  { background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted); cursor: not-allowed; }
+
+    /* ── PNLBAR ─────────────────────────────────── */
+    .pnl-pos { color: var(--green); }
+    .pnl-neg { color: var(--red); }
+
+    /* ── OB / DELTA METER ───────────────────────── */
+    .meter-bar { height:12px; border-radius:3px; overflow:hidden; background:var(--border); display:flex; }
+    .meter-buy { background: rgba(0,230,118,.6); transition:width .4s; }
+    .meter-sell{ background: rgba(255,23,68,.6);  transition:width .4s; }
+
+    /* ── GRID ───────────────────────────────────── */
+    .main-grid { display:grid; grid-template-columns: 1fr 320px; gap:12px; }
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+
+    .content-wrap { padding: 12px 16px; }
+
+    /* ── VWAP BANDS LEGEND ──────────────────────── */
+    .legend-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px; }
+
+    /* ── SCROLLBAR ──────────────────────────────── */
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    /* ── BADGE ──────────────────────────────────── */
+    .badge { display:inline-block; padding:2px 8px; border-radius:3px; font-size:11px; font-weight:700; letter-spacing:1px; }
+    .badge-green { background:rgba(0,230,118,.12); color:var(--green); border:1px solid rgba(0,230,118,.25); }
+    .badge-red   { background:rgba(255,23,68,.12);  color:var(--red);   border:1px solid rgba(255,23,68,.25); }
+    .badge-muted { background:rgba(255,255,255,.05); color:var(--muted); border:1px solid var(--border); }
+
+    /* ── PROFIT TOGGLE ──────────────────────────── */
+    .toggle-wrap { display:flex; align-items:center; gap:10px; cursor:pointer; }
+    .toggle-track { width:40px; height:22px; border-radius:11px; background:var(--border); position:relative; transition:background .2s; border:1px solid var(--border); }
+    .toggle-track.on { background:rgba(0,230,118,.3); border-color:var(--green); }
+    .toggle-thumb { width:16px; height:16px; border-radius:50%; background:var(--muted); position:absolute; top:2px; left:2px; transition:all .2s; }
+    .toggle-track.on .toggle-thumb { left:20px; background:var(--green); }
+
+    /* ── REALTIME TABLE ─────────────────────────── */
+    .rtable td { padding:4px 8px; font-size:13px; border-bottom:1px solid var(--border); }
+    .rtable tr:last-child td { border-bottom:none; }
+
+    /* ── PROFILE BAR ─────────────────────────────── */
+    .prof-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:11px; font-family:'JetBrains Mono',monospace; }
+    .prof-bar-bg { flex:1; height:8px; border-radius:2px; background:var(--border); overflow:hidden; }
+    .prof-bar-fill { height:100%; border-radius:2px; transition:width .5s; }
+    .prof-price { width:60px; color:var(--muted); text-align:right; }
+    .prof-poc { background:rgba(255,215,64,.5) !important; }
+
+    /* ── DEMO BANNER ─────────────────────────────── */
+    .demo-banner {
+      background: rgba(64,196,255,0.12);
+      border-bottom: 2px solid var(--blue);
+      color: var(--blue);
+      padding: 10px 20px;
+      text-align: center;
+      font-size: 13px; font-weight: 700; letter-spacing: 1px;
+      position: sticky; top: 0; z-index: 999;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     DEMO BANNER (shown only when API/WS fails)
+═══════════════════════════════════════════ -->
+<div id="demoBanner" class="demo-banner hidden">
+  ⚠ DEMO MODE ACTIVE – Simulated data only. Real WebSocket/API unreachable. Signals are NOT live.
+</div>
+
+<!-- ══════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════ -->
+<div class="header-bar">
+  <div>
+    <div class="logo-text">FABIO LIVE TRADER</div>
+    <div class="logo-sub">MOMENTUM JOINS · VWAP REVERSALS · DELTA SCALPING</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <select id="symbol" onchange="onSymbolChange(this.value)">
+      <option value="BTCUSD">BTC/USD</option>
+      <option value="ETHUSD">ETH/USD</option>
+    </select>
+    <select id="resolution" onchange="onResChange(this.value)">
+      <option value="1m">1m Fast</option>
+      <option value="5m">5m Scalp</option>
+      <option value="15m" selected>15m Bias</option>
+    </select>
+    <button class="ctrl-reset" onclick="confirmReset()">↺ RESET DAY</button>
+    <span id="connStatus" style="font-size:13px;font-weight:600;display:flex;align-items:center;">
+      <span id="connDot" class="status-dot dot-red"></span>
+      <span id="connLabel">Disconnected</span>
+    </span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     STAT BAR
+═══════════════════════════════════════════ -->
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);">
+  <!-- Price -->
+  <div class="stat-tile" style="grid-column:span 2;background:var(--panel);">
+    <div class="stat-label">Live Price</div>
+    <div id="livePrice" class="price-display price-flat">——</div>
+    <div id="priceChange" style="font-size:13px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace;">0.00%</div>
+  </div>
+  <!-- Daily Bias -->
+  <div class="stat-tile" style="background:var(--panel);">
+    <div class="stat-label">Daily Bias</div>
+    <div id="dailyBias" class="stat-value" style="color:var(--muted)">NEUTRAL</div>
+  </div>
+  <!-- Stops -->
+  <div class="stat-tile" style="background:var(--panel);">
+    <div class="stat-label">Stops Today</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+      <span id="pip1" class="stop-pip stop-empty">1</span>
+      <span id="pip2" class="stop-pip stop-empty">2</span>
+      <span id="pip3" class="stop-pip stop-empty">3</span>
+    </div>
+    <div id="stopWarning" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+  </div>
+  <!-- P&L -->
+  <div class="stat-tile" style="background:var(--panel);">
+    <div class="stat-label">Session P&L</div>
+    <div id="dailyPnL" class="stat-value pnl-pos">+0.00%</div>
+  </div>
+  <!-- Profit toggle -->
+  <div class="stat-tile" style="background:var(--panel);">
+    <div class="stat-label" style="margin-bottom:8px;">Profit Secured</div>
+    <div class="toggle-wrap" onclick="toggleProfit()">
+      <div id="profitTrack" class="toggle-track"><div class="toggle-thumb"></div></div>
+      <span id="profitLabel" style="font-size:14px;font-weight:700;color:var(--muted);">OFF</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MAIN GRID
+═══════════════════════════════════════════ -->
+<div class="main-grid" style="padding:12px;gap:12px;">
+
+  <!-- ─── LEFT: CHARTS ─────────────────────── -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <!-- Price Chart -->
+    <div class="panel">
+      <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>PRICE · VWAP BANDS · POI LEVELS</span>
+        <div style="display:flex;gap:12px;align-items:center;font-size:11px;">
+          <span><span class="legend-dot" style="background:var(--blue);"></span>VWAP</span>
+          <span><span class="legend-dot" style="background:rgba(0,230,118,.5);"></span>+1σ/+2σ</span>
+          <span><span class="legend-dot" style="background:rgba(255,23,68,.5);"></span>-1σ/-2σ</span>
+          <span><span class="legend-dot" style="background:var(--gold);"></span>POI</span>
+        </div>
+      </div>
+      <div id="priceChart" style="height:420px;"></div>
+    </div>
+
+    <!-- CVD + Delta meter row -->
+    <div class="panel">
+      <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>CUMULATIVE VOLUME DELTA</span>
+        <div style="display:flex;gap:20px;align-items:center;">
+          <span style="font-size:12px;">Delta 60-trade window: <strong id="recentDeltaVal" style="font-family:'JetBrains Mono',monospace;">0</strong></span>
+          <span style="font-size:12px;">VWAP: <strong id="vwapVal" style="font-family:'JetBrains Mono',monospace;color:var(--blue);">—</strong></span>
+        </div>
+      </div>
+      <div id="cvdChart" style="height:120px;"></div>
+      <div style="padding:8px 16px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">BUY/SELL AGGRESSION (last 100 trades)</div>
+        <div class="meter-bar">
+          <div id="meterBuy"  class="meter-buy"  style="width:50%"></div>
+          <div id="meterSell" class="meter-sell" style="width:50%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:11px;font-family:'JetBrains Mono',monospace;">
+          <span style="color:var(--green)">BUY <span id="buyPct">50</span>%</span>
+          <span style="color:var(--red)">SELL <span id="sellPct">50</span>%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent trades table -->
+    <div class="panel">
+      <div class="section-head">RECENT TRADES · TIME &amp; SALES</div>
+      <div style="padding:8px;overflow:auto;max-height:160px;">
+        <table class="rtable" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;">
+              <td style="padding:4px 8px;">Time</td>
+              <td style="padding:4px 8px;">Price</td>
+              <td style="padding:4px 8px;">Size</td>
+              <td style="padding:4px 8px;">Side</td>
+            </tr>
+          </thead>
+          <tbody id="tradesBody">
+            <tr><td colspan="4" style="padding:8px;color:var(--muted);font-size:12px;">Waiting for trades…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── RIGHT: SIGNAL + SETUP + PROFILE ─── -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <!-- BIG SIGNAL -->
+    <div id="signalBox" class="panel sig-wait">
+      <div class="signal-wrap">
+        <div id="signalBadge" class="badge badge-muted" style="margin-bottom:4px;"></div>
+        <div id="signalLabel" class="signal-label">WAIT</div>
+        <div id="signalReason" class="signal-reason">Gathering market data…</div>
+        <div id="signalTime" style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- Trade Plan -->
+    <div class="panel">
+      <div class="section-head">NEXT TRADE SETUP</div>
+      <div class="content-wrap">
+        <div id="tradePlan">
+          <div class="trade-row">
+            <span class="trade-key">Side</span>
+            <span class="trade-val" id="tp-side">—</span>
+          </div>
+          <div class="trade-row">
+            <span class="trade-key">Entry</span>
+            <span class="trade-val" id="tp-entry">—</span>
+          </div>
+          <div class="trade-row">
+            <span class="trade-key">Stop</span>
+            <span class="trade-val" id="tp-stop" style="color:var(--red);">—</span>
+          </div>
+          <div class="trade-row">
+            <span class="trade-key">Target 1 (1:3)</span>
+            <span class="trade-val" id="tp-target" style="color:var(--green);">—</span>
+          </div>
+          <div class="trade-row">
+            <span class="trade-key">Stop Dist.</span>
+            <span class="trade-val" id="tp-dist">—</span>
+          </div>
+          <div class="trade-row">
+            <span class="trade-key">Risk</span>
+            <span class="trade-val" id="tp-risk" style="color:var(--gold);">0.25%</span>
+          </div>
+        </div>
+        <button id="tradeBtn" onclick="simulateTakeTrade()" class="btn-trade btn-wait" style="margin-top:12px;">
+          NO SETUP
+        </button>
+      </div>
+    </div>
+
+    <!-- Session Volume Profile -->
+    <div class="panel">
+      <div class="section-head" style="display:flex;justify-content:space-between;">
+        <span>SESSION VOLUME PROFILE</span>
+        <span id="pocLabel" style="font-size:11px;color:var(--gold);font-family:'JetBrains Mono',monospace;"></span>
+      </div>
+      <div class="content-wrap" id="profileArea" style="max-height:260px;overflow:auto;">
+        <div style="color:var(--muted);font-size:12px;">Awaiting trades…</div>
+      </div>
+    </div>
+
+    <!-- Key levels summary -->
+    <div class="panel">
+      <div class="section-head">KEY LEVELS</div>
+      <div class="content-wrap">
+        <div class="trade-row">
+          <span class="trade-key">VWAP</span>
+          <span class="trade-val" id="kl-vwap" style="color:var(--blue);">—</span>
+        </div>
+        <div class="trade-row">
+          <span class="trade-key">VWAP +1σ</span>
+          <span class="trade-val" id="kl-s1u" style="color:rgba(0,230,118,.7);">—</span>
+        </div>
+        <div class="trade-row">
+          <span class="trade-key">VWAP +2σ</span>
+          <span class="trade-val" id="kl-s2u" style="color:var(--green);">—</span>
+        </div>
+        <div class="trade-row">
+          <span class="trade-key">VWAP -1σ</span>
+          <span class="trade-val" id="kl-s1d" style="color:rgba(255,23,68,.7);">—</span>
+        </div>
+        <div class="trade-row">
+          <span class="trade-key">VWAP -2σ</span>
+          <span class="trade-val" id="kl-s2d" style="color:var(--red);">—</span>
+        </div>
+        <div class="trade-row" style="border:none;">
+          <span class="trade-key">Session POC</span>
+          <span class="trade-val" id="kl-poc" style="color:var(--gold);">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ALERT AREA -->
+<div id="alertArea" style="padding:0 12px 12px;"></div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+// ──────────────────────────────────────────────
+// CONFIG
+// ──────────────────────────────────────────────
+const REST_BASE = "https://api.india.delta.exchange/v2";
+const WS_URL    = "wss://socket.india.delta.exchange";
+
+// product IDs for India Delta (BTC perp = 27, ETH perp = 3136 — adjust as needed)
+const PRODUCT_IDS = { BTCUSD: 27, ETHUSD: 3136 };
+const RES_MINS    = { "1m":1, "5m":5, "15m":15 };
+
+let SYMBOL     = "BTCUSD";
+let RESOLUTION = "15m";
+let productId  = PRODUCT_IDS.BTCUSD;
+
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let ws           = null;
+let candles      = [];         // [{t,o,h,l,c,v}]
+let trades       = [];         // last N raw trades from WS
+let cvdHistory   = [];         // running CVD over time
+let cvdValue     = 0;
+let sessionVWAP  = { cumTpVol:0, cumVol:0, vwap:0 };
+let stopsTaken   = 0;
+let dailyPnL     = 0;
+let profitSecured= false;
+let inDemo       = false;          // true when real API/WS unavailable
+let dailyBias    = "NEUTRAL";
+let lastPrice    = 0;
+let prevPrice    = 0;
+let signalState  = "WAIT";
+let signalLoop   = null;
+let reconnectTimer = null;
+
+// ──────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────
+function fmt(n, dec=1){ return n==null?"—":n.toFixed(dec); }
+function fmtTime(ts){ const d=new Date(ts); return d.toTimeString().slice(0,8); }
+
+function deltaFromTrade(t){
+  // Additive: both roles checked independently so neither masks the other
+  let d = 0;
+  if (t.buyer_role  === "taker") d += Number(t.size||0);
+  if (t.seller_role === "taker") d -= Number(t.size||0);
+  // fallback: use 'side' field only when neither role resolved anything
+  if (d === 0) {
+    if (t.side === "buy")  d += Number(t.size||0);
+    if (t.side === "sell") d -= Number(t.size||0);
+  }
+  return d;
+}
+
+function isBuy(t){
+  if (t.buyer_role  === "taker") return true;
+  if (t.seller_role === "taker") return false;
+  return t.side === "buy";
+}
+
+function updateVWAP(price, vol){
+  const tp = parseFloat(price);
+  const v  = parseFloat(vol);
+  sessionVWAP.cumTpVol += tp * v;
+  sessionVWAP.cumVol   += v;
+  if (sessionVWAP.cumVol > 0)
+    sessionVWAP.vwap = sessionVWAP.cumTpVol / sessionVWAP.cumVol;
+}
+
+function getStdDev(){
+  if (candles.length < 5) return { s1:0, s2:0 };
+  const vwap = sessionVWAP.vwap;
+  const slice = candles.slice(-Math.min(60,candles.length));
+  const devs  = slice.map(c => c.c - vwap);
+  const std   = Math.sqrt(devs.reduce((a,b)=>a+b*b,0)/devs.length);
+  return { s1:std, s2:std*2 };
+}
+
+function detectBias(){
+  if (candles.length < 10) return;
+  const n   = Math.min(20, candles.length);
+  const sl  = candles.slice(-n);
+  const last = sl[sl.length-1];
+  const prev = sl.slice(0,-1);
+  const maxH = Math.max(...prev.map(c=>c.h));
+  const minL = Math.min(...prev.map(c=>c.l));
+  if (last.h > maxH) dailyBias = "LONG";
+  else if (last.l < minL) dailyBias = "SHORT";
+  else dailyBias = "NEUTRAL";
+  const el = document.getElementById("dailyBias");
+  el.textContent = dailyBias;
+  el.style.color = dailyBias==="LONG"?"var(--green)":dailyBias==="SHORT"?"var(--red)":"var(--muted)";
+}
+
+function getPOIs(){
+  if (trades.length < 20) return [];
+  const map = {};
+  trades.forEach(t=>{
+    const key = Math.round(parseFloat(t.price||0));
+    map[key] = (map[key]||0) + parseFloat(t.size||0);
+  });
+  return Object.entries(map)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,5)
+    .map(([p])=>parseFloat(p));
+}
+
+function getSessionPOC(){
+  return getPOIs()[0] || null;
+}
+
+function getRecentDelta(n=60){
+  return trades.slice(-n).reduce((a,t)=>a+deltaFromTrade(t),0);
+}
+
+// ──────────────────────────────────────────────
+// SIGNAL ENGINE
+// ──────────────────────────────────────────────
+function generateSignals(){
+  if (!candles.length || !sessionVWAP.vwap){ setSignal("WAIT","data","Gathering market data…"); return; }
+  detectBias();
+  const price = lastPrice || candles[candles.length-1].c;
+  const vwap  = sessionVWAP.vwap;
+  const std   = getStdDev();
+  const pois  = getPOIs();
+  const delta = getRecentDelta(60);
+  const nearPOI = pois.some(p=>Math.abs(price-p)<price*0.003);
+  const nearVWAP= Math.abs(price-vwap)<price*0.002;
+
+  let sig="WAIT", type="wait", reason="No clear setup – waiting for conditions";
+
+  // MAX STOPS
+  if(stopsTaken>=3){
+    setSignal("STOP","wait","Max 3 stops hit – DO NOT TRADE. Rule by Fabio.");
+    updateTradePlan(null,null,price);
+    return;
+  }
+
+  // MOMENTUM LONG
+  if(dailyBias==="LONG" && (nearPOI||nearVWAP) && delta>0){
+    sig="MOMENTUM LONG"; type="long";
+    reason=`Bias LONG · ${nearPOI?"Near POI":"Near VWAP"} · +δ ${delta.toFixed(0)}`;
+  }
+  // MOMENTUM SHORT
+  else if(dailyBias==="SHORT" && (nearPOI||nearVWAP) && delta<0){
+    sig="MOMENTUM SHORT"; type="short";
+    reason=`Bias SHORT · ${nearPOI?"Near POI":"Near VWAP"} · -δ ${Math.abs(delta).toFixed(0)}`;
+  }
+
+  // REVERSAL (only after profit secured)
+  if(profitSecured && std.s2>0){
+    if(price <= vwap-std.s2 && delta>30){
+      sig="REVERSAL LONG"; type="rev-long";
+      reason=`Price @ VWAP-2σ · Buying delta absorbing sellers`;
+    } else if(price >= vwap+std.s2 && delta<-30){
+      sig="REVERSAL SHORT"; type="rev-short";
+      reason=`Price @ VWAP+2σ · Selling delta · Overextended`;
+    }
+  }
+
+  setSignal(sig, type, reason);
+  updateTradePlan(type, sig, price, std);
+  updateKeyLevels(vwap, std, pois[0]);
+}
+
+function setSignal(label, type, reason){
+  signalState = label;
+  const box    = document.getElementById("signalBox");
+  const lbl    = document.getElementById("signalLabel");
+  const rsn    = document.getElementById("signalReason");
+  const badge  = document.getElementById("signalBadge");
+  const ts     = document.getElementById("signalTime");
+  lbl.textContent = label;
+  rsn.textContent = reason;
+  ts.textContent  = "Updated " + fmtTime(Date.now());
+  const clsMap = {
+    long:"sig-long", short:"sig-short",
+    "rev-long":"sig-rev-long","rev-short":"sig-rev-short",
+    wait:"sig-wait", data:"sig-wait"
+  };
+  box.className = "panel " + (clsMap[type]||"sig-wait");
+  // badge
+  if(type==="long"||type==="short"){
+    badge.textContent="MOMENTUM";
+    badge.className="badge "+(type==="long"?"badge-green":"badge-red");
+  } else if(type.includes("rev")){
+    badge.textContent="REVERSAL";
+    badge.className="badge";
+    badge.style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;letter-spacing:1px;background:rgba(213,0,249,.12);color:#d500f9;border:1px solid rgba(213,0,249,.25);";
+  } else {
+    badge.textContent="SCANNING";
+    badge.className="badge badge-muted";
+    badge.style="";
+  }
+}
+
+function updateTradePlan(type, sig, price, std){
+  const side = (type&&type.includes("long"))?"LONG":(type&&type.includes("short"))?"SHORT":null;
+  document.getElementById("tp-side").textContent = side||"—";
+  document.getElementById("tp-side").style.color = side==="LONG"?"var(--green)":side==="SHORT"?"var(--red)":"var(--muted)";
+
+  const btn = document.getElementById("tradeBtn");
+  if(!side){
+    ["tp-entry","tp-stop","tp-target","tp-dist"].forEach(id=>document.getElementById(id).textContent="—");
+    btn.className="btn-trade btn-wait"; btn.textContent="NO SETUP"; return;
+  }
+
+  const mult = side==="LONG"?1:-1;
+  const stopPct = 0.004;
+  const stopDist= price*stopPct;
+  const stop    = price - mult*stopDist;
+  const target  = price + mult*stopDist*3;
+
+  document.getElementById("tp-entry").textContent  = fmt(price,1);
+  document.getElementById("tp-stop").textContent   = fmt(stop,1);
+  document.getElementById("tp-target").textContent = fmt(target,1);
+  document.getElementById("tp-dist").textContent   = (stopPct*100).toFixed(2)+"%";
+
+  btn.className  = "btn-trade "+(side==="LONG"?"btn-long":"btn-short");
+  btn.textContent= "TAKE "+side+" (simulate)";
+}
+
+function updateKeyLevels(vwap, std, poc){
+  document.getElementById("kl-vwap").textContent = fmt(vwap,1);
+  document.getElementById("kl-s1u").textContent  = fmt(vwap+std.s1,1);
+  document.getElementById("kl-s2u").textContent  = fmt(vwap+std.s2,1);
+  document.getElementById("kl-s1d").textContent  = fmt(vwap-std.s1,1);
+  document.getElementById("kl-s2d").textContent  = fmt(vwap-std.s2,1);
+  document.getElementById("kl-poc").textContent  = poc?fmt(poc,1):"—";
+  document.getElementById("vwapVal").textContent = fmt(vwap,1);
+  if(poc) document.getElementById("pocLabel").textContent="POC "+fmt(poc,1);
+}
+
+// ──────────────────────────────────────────────
+// PRICE CHART
+// ──────────────────────────────────────────────
+function renderPriceChart(){
+  if(!candles.length) return;
+  const times = candles.map(c=>new Date(c.t));
+  const vwap  = sessionVWAP.vwap;
+  const std   = getStdDev();
+  const pois  = getPOIs();
+
+  const traces = [];
+
+  // Candlestick
+  traces.push({
+    type:'candlestick', x:times,
+    open:candles.map(c=>c.o), high:candles.map(c=>c.h),
+    low:candles.map(c=>c.l),  close:candles.map(c=>c.c),
+    name:"Price",
+    increasing:{line:{color:"#00e676",width:1.5},fillcolor:"rgba(0,230,118,.2)"},
+    decreasing:{line:{color:"#ff1744",width:1.5},fillcolor:"rgba(255,23,68,.2)"},
+    hoverinfo:"x+y"
+  });
+
+  // VWAP + bands
+  if(vwap){
+    const tRange = times;
+    const vwapLine = Array(tRange.length).fill(vwap);
+    const addBand = (val, color, name, dash="dot") => traces.push({
+      type:"scatter", x:tRange, y:Array(tRange.length).fill(val),
+      mode:"lines", name, line:{color,width:1,dash},hoverinfo:"none"
+    });
+    traces.push({type:"scatter",x:tRange,y:vwapLine,mode:"lines",name:"VWAP",
+      line:{color:"#40c4ff",width:1.5},hoverinfo:"name+y"});
+    if(std.s1){
+      addBand(vwap+std.s1,"rgba(0,230,118,.5)","VWAP+1σ");
+      addBand(vwap-std.s1,"rgba(255,23,68,.5)","VWAP-1σ");
+      addBand(vwap+std.s2,"rgba(0,230,118,.9)","VWAP+2σ","solid");
+      addBand(vwap-std.s2,"rgba(255,23,68,.9)","VWAP-2σ","solid");
+    }
+  }
+
+  // POI horizontal lines
+  pois.forEach((p,i)=>{
+    traces.push({
+      type:"scatter",x:[times[0],times[times.length-1]],y:[p,p],
+      mode:"lines",name:`POI ${i+1}`,
+      line:{color:"rgba(255,215,64,.5)",width:1,dash:"dot"},hoverinfo:"none"
+    });
+  });
+
+  const layout = {
+    paper_bgcolor:"transparent", plot_bgcolor:"transparent",
+    margin:{t:10,r:10,b:30,l:65},
+    xaxis:{
+      rangeslider:{visible:false},
+      gridcolor:"rgba(255,255,255,.04)", color:"#4a5580",
+      tickfont:{family:"JetBrains Mono",size:10,color:"#4a5580"}
+    },
+    yaxis:{
+      gridcolor:"rgba(255,255,255,.04)", color:"#4a5580",
+      tickfont:{family:"JetBrains Mono",size:10,color:"#4a5580"},
+      side:"right"
+    },
+    legend:{x:0,y:1.02,orientation:"h",font:{color:"#4a5580",size:10},bgcolor:"transparent"},
+    showlegend:false
+  };
+
+  const cfg = {responsive:true,displayModeBar:false};
+  const el  = document.getElementById("priceChart");
+  if(el._plotlyLayout) Plotly.react(el, traces, layout, cfg);
+  else { Plotly.newPlot(el, traces, layout, cfg); el._plotlyLayout=true; }
+}
+
+// ──────────────────────────────────────────────
+// CVD CHART
+// ──────────────────────────────────────────────
+function renderCVDChart(){
+  const n = Math.min(cvdHistory.length, 200);
+  if(n<2) return;
+  const slice = cvdHistory.slice(-n);
+  const times = slice.map(c=>new Date(c.t));
+  const vals  = slice.map(c=>c.v);
+  const color = cvdValue>=0 ? "rgba(0,230,118,.8)" : "rgba(255,23,68,.8)";
+  const fill  = cvdValue>=0 ? "rgba(0,230,118,.1)" : "rgba(255,23,68,.1)";
+
+  const traces = [{
+    type:"scatter", x:times, y:vals, mode:"lines",
+    line:{color,width:1.5}, fill:"tozeroy", fillcolor:fill,
+    hoverinfo:"x+y", name:"CVD"
+  }];
+  const layout = {
+    paper_bgcolor:"transparent", plot_bgcolor:"transparent",
+    margin:{t:4,r:10,b:24,l:65},
+    xaxis:{gridcolor:"rgba(255,255,255,.04)",color:"#4a5580",tickfont:{family:"JetBrains Mono",size:9,color:"#4a5580"}},
+    yaxis:{gridcolor:"rgba(255,255,255,.04)",color:"#4a5580",tickfont:{family:"JetBrains Mono",size:9,color:"#4a5580"},side:"right"},
+    showlegend:false
+  };
+  const cfg = {responsive:true,displayModeBar:false};
+  const el  = document.getElementById("cvdChart");
+  if(el._plotlyLayout) Plotly.react(el,traces,layout,cfg);
+  else { Plotly.newPlot(el,traces,layout,cfg); el._plotlyLayout=true; }
+}
+
+// ──────────────────────────────────────────────
+// VOLUME PROFILE
+// ──────────────────────────────────────────────
+function renderProfile(){
+  if(trades.length<10) return;
+  const step = lastPrice>5000?50:5;
+  const map  = {};
+  trades.forEach(t=>{
+    const key = Math.round(parseFloat(t.price||0)/step)*step;
+    if(!map[key]) map[key]={buy:0,sell:0};
+    const size = parseFloat(t.size||0);
+    if(isBuy(t)) map[key].buy+=size; else map[key].sell+=size;
+  });
+  const sorted = Object.entries(map).sort((a,b)=>b[0]-a[0]); // price descending
+  const maxVol = Math.max(...sorted.map(([,v])=>v.buy+v.sell));
+  const poc    = sorted.reduce((best,cur)=>{
+    const cv = cur[1].buy+cur[1].sell;
+    return cv>(best[1].buy+best[1].sell)?cur:best;
+  }, sorted[0]);
+
+  const area = document.getElementById("profileArea");
+  area.innerHTML = sorted.slice(0,30).map(([p,v])=>{
+    const tot   = v.buy+v.sell;
+    const pct   = maxVol>0?(tot/maxVol*100):0;
+    const isPOC = poc&&poc[0]===p;
+    const bPct  = tot>0?(v.buy/tot*100):50;
+    return `<div class="prof-row">
+      <span class="prof-price">${parseFloat(p).toFixed(0)}</span>
+      <div class="prof-bar-bg">
+        <div class="prof-bar-fill ${isPOC?"prof-poc":""}" style="width:${pct.toFixed(1)}%;background:${isPOC?"rgba(255,215,64,.5)":"linear-gradient(90deg,rgba(0,230,118,.5) "+bPct.toFixed(0)+"%, rgba(255,23,68,.5) "+bPct.toFixed(0)+"%)"};"></div>
+      </div>
+      ${isPOC?`<span style="font-size:9px;color:var(--gold);margin-left:3px;">POC</span>`:""}
+    </div>`;
+  }).join("");
+}
+
+// ──────────────────────────────────────────────
+// DELTA METER
+// ──────────────────────────────────────────────
+function updateDeltaMeter(){
+  const last100 = trades.slice(-100);
+  const buys  = last100.filter(t=>isBuy(t)).reduce((a,t)=>a+parseFloat(t.size||0),0);
+  const sells = last100.filter(t=>!isBuy(t)).reduce((a,t)=>a+parseFloat(t.size||0),0);
+  const total = buys+sells;
+  const bPct  = total>0?Math.round(buys/total*100):50;
+  const sPct  = 100-bPct;
+  document.getElementById("meterBuy").style.width  = bPct+"%";
+  document.getElementById("meterSell").style.width = sPct+"%";
+  document.getElementById("buyPct").textContent    = bPct;
+  document.getElementById("sellPct").textContent   = sPct;
+  const rd = getRecentDelta(60);
+  document.getElementById("recentDeltaVal").textContent = (rd>0?"+":"")+rd.toFixed(0);
+  document.getElementById("recentDeltaVal").style.color = rd>=0?"var(--green)":"var(--red)";
+}
+
+// ──────────────────────────────────────────────
+// TIME & SALES TABLE
+// ──────────────────────────────────────────────
+function updateTradesTable(){
+  const last = trades.slice(-15).reverse();
+  const body = document.getElementById("tradesBody");
+  if(!last.length){ body.innerHTML="<tr><td colspan='4' style='padding:8px;color:var(--muted);font-size:12px;'>Waiting for trades…</td></tr>"; return; }
+  body.innerHTML = last.map(t=>{
+    const buy  = isBuy(t);
+    const col  = buy?"var(--green)":"var(--red)";
+    const side = buy?"BUY":"SELL";
+    const time = t._ts ? fmtTime(t._ts) : "—";
+    return `<tr>
+      <td style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;">${time}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${fmt(parseFloat(t.price||0),1)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${parseFloat(t.size||0).toFixed(0)}</td>
+      <td style="color:${col};font-weight:700;font-size:12px;">${side}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ──────────────────────────────────────────────
+// WEBSOCKET
+// ──────────────────────────────────────────────
+function connectWS(){
+  if(ws){ try{ ws.close(); }catch(e){} ws=null; }
+  setConnStatus("connecting");
+  let heartbeatTimer = null;
+  try {
+    ws = new WebSocket(WS_URL);
+  } catch(e) {
+    setConnStatus("error");
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = () => {
+    setConnStatus("connected");
+    clearTimeout(reconnectTimer);
+    // Subscribe to trades and candlestick
+    const sub = {
+      type:"subscribe",
+      payload:{
+        channels:[
+          { name:"all_trades",            symbols:[SYMBOL] },
+          { name:"candlestick_"+RESOLUTION, symbols:[SYMBOL] }
+        ]
+      }
+    };
+    ws.send(JSON.stringify(sub));
+    console.log("[WS] Subscribed:", sub);
+    // Keep-alive ping every 25s (Delta closes idle connections at ~30s)
+    heartbeatTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "ping" }));
+        console.log("[WS] Ping sent");
+      }
+    }, 25000);
+  };
+
+  ws.onmessage = (ev) => {
+    let data;
+    try { data = JSON.parse(ev.data); } catch(e){ return; }
+    if(!data || !data.type) return;
+
+    console.log("[WS] msg:", data.type);
+
+    if (data.type === "heartbeat" || data.type === "pong") {
+      // Server acknowledged ping — connection alive, nothing else needed
+      console.log("[WS] Heartbeat/Pong received");
+      return;
+    }
+
+    if(data.type === "all_trades" || data.type === "all_trades_snapshot"){
+      handleTrade(data);
+    } else if(data.type && data.type.startsWith("candlestick")){
+      handleCandle(data);
+    }
+  };
+
+  ws.onerror = () => {
+    setConnStatus("error");
+  };
+
+  ws.onclose = () => {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+    setConnStatus("disconnected");
+    scheduleReconnect();
+  };
+}
+
+function scheduleReconnect(){
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(()=>{ connectWS(); }, 5000);
+}
+
+function setConnStatus(state){
+  const dot  = document.getElementById("connDot");
+  const lbl  = document.getElementById("connLabel");
+  const map  = {
+    connected:    ["dot-green","Connected"],
+    connecting:   ["dot-yellow","Connecting…"],
+    disconnected: ["dot-red","Disconnected"],
+    error:        ["dot-red","Error – retry in 5s"],
+    demo:         ["dot-yellow","Demo Mode"]
+  };
+  const [cls,text] = map[state]||map.disconnected;
+  dot.className  = "status-dot "+cls;
+  lbl.textContent= text;
+}
+
+// ──────────────────────────────────────────────
+// CANDLE HANDLER
+// ──────────────────────────────────────────────
+function handleCandle(data){
+  const c = data.candle || data;
+  if(!c) return;
+
+  // candle_start_time is in microseconds; start_at/time may be seconds or ms
+  let tMs;
+  if (c.candle_start_time) {
+    tMs = Math.round(c.candle_start_time / 1000); // µs → ms
+  } else {
+    const raw = c.start_at || c.time || Date.now();
+    // If value looks like seconds (< year 2100 in ms = 4102444800000)
+    tMs = raw < 9999999999 ? raw * 1000 : raw;
+  }
+
+  const candle = {
+    t: tMs,
+    o: parseFloat(c.open||0),
+    h: parseFloat(c.high||0),
+    l: parseFloat(c.low||0),
+    c: parseFloat(c.close||0),
+    v: parseFloat(c.volume||0)
+  };
+  if(!candle.o||!candle.c) return;
+
+  const last = candles[candles.length-1];
+  if(last && last.t === candle.t){
+    candles[candles.length-1] = candle; // update current bar
+  } else {
+    candles.push(candle);
+    if(candles.length>500) candles.shift();
+  }
+  updateVWAP(candle.c, candle.v);
+}
+
+// ──────────────────────────────────────────────
+// TRADE HANDLER
+// ──────────────────────────────────────────────
+function handleTrade(data){
+  const t = data.trade || data;
+  if(!t || !t.price) return;
+  t._ts = Date.now();
+  trades.push(t);
+  if(trades.length>2000) trades.shift();
+
+  const price = parseFloat(t.price);
+  prevPrice   = lastPrice;
+  lastPrice   = price;
+
+  // Update CVD
+  const d = deltaFromTrade(t);
+  cvdValue += d;
+  cvdHistory.push({ t:Date.now(), v:cvdValue });
+  if(cvdHistory.length>500) cvdHistory.shift();
+
+  // Update VWAP with each trade
+  updateVWAP(price, parseFloat(t.size||1));
+
+  // Update live price display
+  const el = document.getElementById("livePrice");
+  el.textContent = fmt(price, lastPrice>1000?1:2);
+  el.className   = "price-display "+(price>prevPrice?"price-up":price<prevPrice?"price-down":"price-flat");
+
+  if(prevPrice){
+    const chg = (price-prevPrice)/prevPrice*100;
+    document.getElementById("priceChange").textContent = (chg>=0?"+":"")+chg.toFixed(3)+"%";
+    document.getElementById("priceChange").style.color = chg>=0?"var(--green)":"var(--red)";
+  }
+}
+
+// ──────────────────────────────────────────────
+// FETCH HISTORY (REST)
+// ──────────────────────────────────────────────
+async function fetchHistory(){
+  try {
+    const mins = RES_MINS[RESOLUTION]||15;
+    const end  = Math.floor(Date.now()/1000);
+    const start= end - mins*60*200; // 200 bars back
+    const url  = `${REST_BASE}/history/candles?symbol=${SYMBOL}&resolution=${RESOLUTION}&start=${start}&end=${end}`;
+    const res  = await fetch(url);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json = await res.json();
+    const raw  = json.result || json.candles || json || [];
+    candles = raw.map(c=>{
+      // candle_start_time is microseconds; start_at/time/t may be seconds
+      const tsMicro = c.candle_start_time || c.start_at || c.time || c.t || 0;
+      const tsMs    = tsMicro / 1000;  // μs → ms  (also works for seconds→sub-ms, filtered below)
+      return {
+        t: tsMs,
+        o: parseFloat(c.open||c.o||0),
+        h: parseFloat(c.high||c.h||0),
+        l: parseFloat(c.low||c.l||0),
+        c: parseFloat(c.close||c.c||0),
+        v: parseFloat(c.volume||c.v||0)
+      };
+    }).filter(c=>c.o&&c.c).sort((a,b)=>a.t-b.t);
+    if(candles.length){
+      lastPrice = candles[candles.length-1].c;
+      // seed VWAP
+      candles.forEach(c=>updateVWAP(c.c,c.v||1));
+    }
+    renderPriceChart();
+    detectBias();
+  } catch(e){
+    console.warn("History fetch failed:", e.message);
+    // Generate demo candles so UI still works
+    seedDemoData();
+  }
+}
+
+// ──────────────────────────────────────────────
+// DEMO MODE (fallback)
+// ──────────────────────────────────────────────
+function seedDemoData(){
+  inDemo = true;
+  document.getElementById("demoBanner").classList.remove("hidden");
+  setConnStatus("demo");
+  showAlert("Could not reach Delta Exchange API – running in demo mode with simulated data.", "info");
+  const base  = SYMBOL==="BTCUSD" ? 65000 : 3200;
+  const now   = Date.now();
+  const mins  = RES_MINS[RESOLUTION]||15;
+  candles     = [];
+  let price   = base;
+  for(let i=100;i>=0;i--){
+    const vol  = 10+Math.random()*30;
+    const move = (Math.random()-0.48)*price*0.003;
+    price     += move;
+    const o    = price, c=o+move*0.5;
+    candles.push({
+      t: now - i*mins*60*1000,
+      o, h:Math.max(o,c)*(1+Math.random()*.002),
+      l:Math.min(o,c)*(1-Math.random()*.002), c, v:vol
+    });
+    updateVWAP(c,vol);
+  }
+  lastPrice = candles[candles.length-1].c;
+  // Seed demo trades
+  for(let i=0;i<200;i++){
+    const buy = Math.random()>.48;
+    const tp  = lastPrice*(1+(Math.random()-.5)*.005);
+    const t   = { price:tp.toFixed(1), size:(1+Math.random()*10).toFixed(2),
+                  buyer_role:buy?"taker":"maker", seller_role:buy?"maker":"taker", _ts:Date.now()-i*500 };
+    trades.push(t);
+    cvdValue+=deltaFromTrade(t);
+    cvdHistory.push({t:Date.now()-i*500, v:cvdValue});
+  }
+  trades.sort((a,b)=>a._ts-b._ts);
+  cvdHistory.sort((a,b)=>a.t-b.t);
+  detectBias();
+  renderAll();
+  startDemoFeed();
+}
+
+function startDemoFeed(){
+  setInterval(()=>{
+    const buy  = Math.random()>.48;
+    const price= lastPrice*(1+(Math.random()-.5)*.002);
+    const t    = { price:price.toFixed(1), size:(0.5+Math.random()*5).toFixed(2),
+                   buyer_role:buy?"taker":"maker", seller_role:buy?"maker":"taker" };
+    handleTrade(t);
+    // Occasionally update candle
+    if(Math.random()>.8){
+      const last  = candles[candles.length-1];
+      const newC  = {...last, c:price, h:Math.max(last.h,price), l:Math.min(last.l,price), v:(last.v||0)+1};
+      candles[candles.length-1] = newC;
+    }
+    debouncedRender();
+  }, 800);
+}
+
+// ──────────────────────────────────────────────
+// RENDER ALL
+// ──────────────────────────────────────────────
+let renderScheduled = false;
+function debouncedRender(){
+  if(renderScheduled) return;
+  renderScheduled=true;
+  requestAnimationFrame(()=>{ renderAll(); renderScheduled=false; });
+}
+
+function renderAll(){
+  renderPriceChart();
+  renderCVDChart();
+  renderProfile();
+  updateDeltaMeter();
+  updateTradesTable();
+  generateSignals();
+}
+
+// ──────────────────────────────────────────────
+// UI ACTIONS
+// ──────────────────────────────────────────────
+function simulateTakeTrade(){
+  if(stopsTaken>=3){ showAlert("Max 3 stops today – Fabio rule: STOP TRADING."); return; }
+  const side = signalState.includes("LONG")?"LONG":signalState.includes("SHORT")?"SHORT":null;
+  if(!side){ showAlert("No active setup – wait for a signal first.","info"); return; }
+  // Simulate: randomly win (1:3) or lose (1:1)
+  const win = Math.random()>.4;
+  if(!win){
+    stopsTaken++;
+    dailyPnL -= 0.25;
+    updateStopPips();
+    showAlert(`Simulated STOP on ${side}. Stops used: ${stopsTaken}/3.`);
+  } else {
+    dailyPnL += 0.75; // 0.25% × 3R
+    showAlert(`Simulated WIN on ${side} (+0.75%). PnL updated.`,"info");
+  }
+  const pnlEl = document.getElementById("dailyPnL");
+  pnlEl.textContent = (dailyPnL>=0?"+":"")+dailyPnL.toFixed(2)+"%";
+  pnlEl.className = "stat-value "+(dailyPnL>=0?"pnl-pos":"pnl-neg");
+}
+
+function updateStopPips(){
+  for(let i=1;i<=3;i++){
+    const el = document.getElementById("pip"+i);
+    if(i<=stopsTaken){ el.className="stop-pip stop-used"; }
+    else { el.className="stop-pip stop-empty"; }
+  }
+  const warn = document.getElementById("stopWarning");
+  if(stopsTaken>=3) warn.textContent="⛔ MAX STOPS";
+  else if(stopsTaken===2) warn.textContent="⚠ Last stop";
+  else warn.textContent="";
+}
+
+function toggleProfit(){
+  profitSecured = !profitSecured;
+  const track = document.getElementById("profitTrack");
+  const lbl   = document.getElementById("profitLabel");
+  track.classList.toggle("on", profitSecured);
+  lbl.textContent = profitSecured?"ON":"OFF";
+  lbl.style.color = profitSecured?"var(--green)":"var(--muted)";
+  generateSignals();
+}
+
+function showAlert(msg, type="error"){
+  const area = document.getElementById("alertArea");
+  const cls  = type==="info"?"alert-box alert-info":"alert-box";
+  area.innerHTML = `<div class="${cls}">${msg}</div>`;
+  setTimeout(()=>area.innerHTML="", 7000);
+}
+
+function confirmReset(){
+  if(!confirm("Reset session? Clears VWAP, CVD, candles, stops, P&L.")) return;
+  resetSession();
+}
+
+function resetSession(){
+  stopsTaken   = 0;
+  dailyPnL     = 0;
+  profitSecured= false;
+  inDemo       = false;
+  document.getElementById("demoBanner").classList.add("hidden");
+  sessionVWAP  = {cumTpVol:0,cumVol:0,vwap:0};
+  trades       = [];
+  candles      = [];
+  cvdValue     = 0;
+  cvdHistory   = [];
+  lastPrice    = 0;
+  prevPrice    = 0;
+  dailyBias    = "NEUTRAL";
+  updateStopPips();
+  document.getElementById("dailyPnL").textContent="+0.00%";
+  document.getElementById("dailyPnL").className="stat-value pnl-pos";
+  document.getElementById("profitTrack").classList.remove("on");
+  document.getElementById("profitLabel").textContent="OFF";
+  document.getElementById("profitLabel").style.color="var(--muted)";
+  document.getElementById("dailyBias").textContent="NEUTRAL";
+  document.getElementById("dailyBias").style.color="var(--muted)";
+  setSignal("WAIT","wait","Day reset – gathering market data…");
+  init();
+}
+
+function onSymbolChange(val){
+  SYMBOL = val;
+  productId = PRODUCT_IDS[val]||27;
+  resetSession();
+}
+
+function onResChange(val){
+  RESOLUTION = val;
+  resetSession();
+}
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+async function init(){
+  await fetchHistory();
+  connectWS();
+  // Periodic render + signal refresh
+  if(signalLoop) clearInterval(signalLoop);
+  signalLoop = setInterval(()=>{
+    generateSignals();
+    renderCVDChart();
+    updateDeltaMeter();
+    updateTradesTable();
+    renderProfile();
+    // Refresh price chart every 30s
+  }, 3000);
+  setInterval(renderPriceChart, 30000);
+}
+
+// Boot
+init();
+</script>
+</body>
+</html>
