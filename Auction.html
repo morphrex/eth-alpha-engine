@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delta Exchange | Valentini Institutional AMT v5 Ultra</title>
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0b0e11; color: #eaecef; font-family: 'Segoe UI', sans-serif; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 2px solid #2b3339; margin-bottom: 20px; }
+        .status { padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: #161a1e; border-radius: 10px; padding: 20px; border: 1px solid #2b3339; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: #1e2329; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #2b3339; }
+        .stat-label { font-size: 10px; color: #848e9c; text-transform: uppercase; margin-bottom: 4px; }
+        .stat-value { font-size: 16px; font-weight: 700; }
+        .info-row { background: #1e2329; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 11px; display: flex; justify-content: space-between; border-left: 3px solid #f0b90b; }
+        .chart-container { height: 250px; width: 100%; border-radius: 6px; overflow: hidden; margin-top: 15px; border: 1px solid #2b3339; }
+        .signal-box { background: #1e2329; padding: 15px; border-radius: 6px; margin-top: 10px; border: 1px solid #2b3339; min-height: 180px; font-family: monospace; }
+        .journal-box { margin-top: 15px; background: #0b0e11; border-radius: 6px; padding: 10px; border: 1px solid #2b3339; max-height: 200px; overflow-y: auto; }
+        .journal-title { font-size: 11px; color: #848e9c; text-transform: uppercase; margin-bottom: 8px; display: block; border-bottom: 1px solid #2b3339; padding-bottom: 4px; }
+        .journal-entry { font-size: 10px; padding: 8px 0; border-bottom: 1px solid #1e2329; line-height: 1.4; }
+        .journal-row { display: flex; justify-content: space-between; }
+        .bull { color: #0ecb81; } .bear { color: #f6465d; } .hit-tp { color: #0ecb81; font-weight: bold; } .hit-sl { color: #f6465d; font-weight: bold; }
+        .lot-input { background: #1e2329; border: 1px solid #2b3339; color: #0ecb81; padding: 4px 8px; border-radius: 4px; width: 60px; font-weight: bold; outline: none; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1 style="font-size: 22px;">🏛️ Valentini Institutional AMT v5 Ultra</h1>
+        <small style="color: #848e9c;">Value Area Logic | Structural SL | R:R Filter</small>
+    </div>
+    <div id="status" class="status">● Live Feed</div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <div style="margin-bottom:15px; font-weight:600; display: flex; justify-content: space-between; align-items: center;">
+            <span>📊 BTCUSD Profile</span>
+            <div><span style="font-size:11px; color:#848e9c;">LOTS:</span> <input type="number" id="btc-lots" class="lot-input" value="4" min="1"></div>
+        </div>
+        <div class="stats">
+            <div class="stat-box"><div class="stat-label">Price</div><div class="stat-value" id="btc-price">---</div></div>
+            <div class="stat-box"><div class="stat-label">State</div><div class="stat-value" id="btc-state">---</div></div>
+            <div class="stat-box"><div class="stat-label">15m Trend</div><div class="stat-value" id="btc-htf">---</div></div>
+        </div>
+        <div class="info-row">
+            <span>VAH: <b id="btc-vah">--</b></span>
+            <span>POC: <b id="btc-poc">--</b></span>
+            <span>VAL: <b id="btc-val">--</b></span>
+        </div>
+        <div id="btc-signal" class="signal-box">Scanning Orderflow...</div>
+        <div class="journal-box"><span class="journal-title">BTC Trade Journal</span><div id="btc-journal-list"></div></div>
+        <div id="btc-chart" class="chart-container"></div>
+    </div>
+
+    <div class="card">
+        <div style="margin-bottom:15px; font-weight:600; display: flex; justify-content: space-between; align-items: center;">
+            <span>📊 ETHUSD Profile</span>
+            <div><span style="font-size:11px; color:#848e9c;">LOTS:</span> <input type="number" id="eth-lots" class="lot-input" value="4" min="1"></div>
+        </div>
+        <div class="stats">
+            <div class="stat-box"><div class="stat-label">Price</div><div class="stat-value" id="eth-price">---</div></div>
+            <div class="stat-box"><div class="stat-label">State</div><div class="stat-value" id="eth-state">---</div></div>
+            <div class="stat-box"><div class="stat-label">15m Trend</div><div class="stat-value" id="eth-htf">---</div></div>
+        </div>
+        <div class="info-row">
+            <span>VAH: <b id="eth-vah">--</b></span>
+            <span>POC: <b id="eth-poc">--</b></span>
+            <span>VAL: <b id="eth-val">--</b></span>
+        </div>
+        <div id="eth-signal" class="signal-box">Scanning Orderflow...</div>
+        <div class="journal-box"><span class="journal-title">ETH Trade Journal</span><div id="eth-journal-list"></div></div>
+        <div id="eth-chart" class="chart-container"></div>
+    </div>
+</div>
+
+<script>
+    const symbols = { 'BTCUSD': 'btc', 'ETHUSD': 'eth' };
+    const historicalData = { 'BTCUSD': [], 'ETHUSD': [] };
+    const htfData = { 'BTCUSD': [], 'ETHUSD': [] }; 
+    const candleSeries = {};
+    const activeTrades = { 'BTCUSD': null, 'ETHUSD': null };
+    const tradeHistory = { 'BTCUSD': [], 'ETHUSD': [] };
+    const cooldowns = { 'BTCUSD': 0, 'ETHUSD': 0 };
+    let isLoaded = false;
+
+    function isValid(d) { return d && !isNaN(d.time) && !isNaN(d.close); }
+
+    async function init() {
+        const now = Math.floor(Date.now() / 1000);
+        const baseUrl = 'https://api.india.delta.exchange/v2/history/candles';
+        for (const [symbol, prefix] of Object.entries(symbols)) {
+            const container = document.getElementById(`${prefix}-chart`);
+            const chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth, height: 250,
+                layout: { backgroundColor: '#161a1e', textColor: '#d1d4dc' },
+                grid: { vertLines: { color: '#2b2f36' }, horzLines: { color: '#2b2f36' } },
+                timeScale: { timeVisible: true }
+            });
+            candleSeries[symbol] = chart.addCandlestickSeries({ upColor: '#0ecb81', downColor: '#f6465d', borderVisible: false });
+            try {
+                const [res1m, res15m] = await Promise.all([
+                    fetch(`${baseUrl}?symbol=${symbol}&resolution=1m&start=${now-(150*60)}&end=${now}`),
+                    fetch(`${baseUrl}?symbol=${symbol}&resolution=15m&start=${now-(600*60)}&end=${now}`)
+                ]);
+                const j1 = await res1m.json(); const j15 = await res15m.json();
+                if (j1.success) {
+                    historicalData[symbol] = j1.result.map(d => ({
+                        time: parseInt(d.time), open: parseFloat(d.open), high: parseFloat(d.high), low: parseFloat(d.low), close: parseFloat(d.close), volume: parseFloat(d.volume || 0.1)
+                    })).filter(isValid).sort((a,b) => a.time - b.time);
+                    candleSeries[symbol].setData(historicalData[symbol]);
+                }
+                if (j15.success) htfData[symbol] = j15.result.map(d => ({ time: parseInt(d.time), close: parseFloat(d.close) })).filter(isValid);
+                calculateAMT(symbol);
+            } catch (e) { console.error(e); }
+        }
+        isLoaded = true;
+        connectWS();
+    }
+
+    function connectWS() {
+        const ws = new WebSocket('wss://socket.india.delta.exchange');
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', payload: { channels: [{ name: 'v2/ticker', symbols: Object.keys(symbols) }] } }));
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type !== 'v2/ticker' || !data.symbol) return;
+            const symbol = data.symbol;
+            const price = parseFloat(data.mark_price || data.close);
+            if (isNaN(price) || !isLoaded) return;
+            document.getElementById(`${symbols[symbol]}-price`).innerText = `$${price.toLocaleString()}`;
+            const dataArr = historicalData[symbol];
+            const last = dataArr[dataArr.length - 1];
+            const currentMin = Math.floor(Date.now() / 1000 / 60) * 60;
+            if (last && last.time === currentMin) {
+                last.close = price; last.high = Math.max(last.high, price); last.low = Math.min(last.low, price);
+                candleSeries[symbol].update(last);
+            } else if (last && currentMin > last.time) {
+                const newC = { time: currentMin, open: price, high: price, low: price, close: price, volume: 0.1 };
+                dataArr.push(newC);
+                candleSeries[symbol].update(newC);
+            }
+            checkTradeOutcome(symbol, price);
+            calculateAMT(symbol);
+        };
+        ws.onclose = () => setTimeout(connectWS, 5000);
+    }
+
+    function calculateAMT(symbol) {
+        const prefix = symbols[symbol];
+        const data = historicalData[symbol];
+        const htf = htfData[symbol];
+        if (data.length < 30 || !htf.length) return;
+
+        const currentPrice = data[data.length - 1].close;
+        const slice = data.slice(-30);
+        
+        const sortedByPrice = [...slice].sort((a,b) => a.close - b.close);
+        const totalVol = slice.reduce((s, c) => s + c.volume, 0);
+        const poc = [...slice].sort((a,b) => b.volume - a.volume)[0].close;
+        let currentVol = 0, vah = poc, val = poc;
+        
+        for(let i=0; i<sortedByPrice.length; i++) {
+            currentVol += sortedByPrice[i].volume;
+            if (currentVol >= (totalVol * 0.15) && val === poc) val = sortedByPrice[i].close;
+            if (currentVol >= (totalVol * 0.85)) { vah = sortedByPrice[i].close; break; }
+        }
+
+        const precision = symbol.includes('BTC') ? 0 : 2;
+        document.getElementById(`${prefix}-vah`).innerText = `$${vah.toFixed(precision)}`;
+        document.getElementById(`${prefix}-poc`).innerText = `$${poc.toFixed(precision)}`;
+        document.getElementById(`${prefix}-val`).innerText = `$${val.toFixed(precision)}`;
+
+        const rangeHigh = Math.max(...slice.map(d => d.high));
+        const rangeLow = Math.min(...slice.map(d => d.low));
+        const trend = currentPrice > htf[htf.length-1].close ? "BULLISH" : "BEARISH";
+        const isBalance = (rangeHigh - rangeLow) < (currentPrice * 0.006);
+
+        document.getElementById(`${prefix}-state`).innerText = isBalance ? "BALANCE" : "IMBALANCE";
+        document.getElementById(`${prefix}-htf`).innerText = trend;
+
+        const lastCandle = data[data.length - 2];
+        const side = lastCandle.close > lastCandle.open ? "BUY" : "SELL";
+        const aggression = Math.abs(lastCandle.close - lastCandle.open) / (lastCandle.high - lastCandle.low) > 0.5;
+        
+        let setup = "NONE", target = poc, sl = side === "BUY" ? rangeLow : rangeHigh;
+
+        if (isBalance && side === "BUY" && lastCandle.low < rangeLow && currentPrice > rangeLow) {
+            setup = "FAILED AUCTION"; target = vah;
+        } else if (isBalance && side === "SELL" && lastCandle.high > rangeHigh && currentPrice < rangeHigh) {
+            setup = "FAILED AUCTION"; target = val;
+        } else if (!isBalance && trend === "BULLISH" && side === "BUY" && lastCandle.low <= val && currentPrice > val) {
+            setup = "VA REJECTION"; target = rangeHigh;
+        } else if (!isBalance && trend === "BEARISH" && side === "SELL" && lastCandle.high >= vah && currentPrice < vah) {
+            setup = "VA REJECTION"; target = rangeLow;
+        }
+
+        const risk = Math.abs(currentPrice - sl);
+        const reward = Math.abs(currentPrice - target);
+        const rr = reward / (risk || 1);
+
+        // Check Cooldown and RR
+        if (setup !== "NONE" && !activeTrades[symbol] && rr >= 1.5 && Date.now() > cooldowns[symbol]) {
+            logTrade(symbol, setup, side, currentPrice, target, sl);
+        }
+        updateUI(prefix, setup, side, currentPrice, target, sl, isBalance, aggression, rr);
+    }
+
+    function logTrade(symbol, setup, side, entry, tp, sl) {
+        const lots = document.getElementById(`${symbols[symbol]}-lots`).value || 1;
+        const trade = { setup, side, entry, sl, tp, lots, status: 'OPEN', exitPrice: null };
+        activeTrades[symbol] = trade;
+        tradeHistory[symbol].unshift(trade);
+        renderJournal(symbol);
+    }
+
+    function checkTradeOutcome(symbol, price) {
+        const t = activeTrades[symbol];
+        if (!t) return;
+        const hitTP = (t.side === "BUY" && price >= t.tp) || (t.side === "SELL" && price <= t.tp);
+        const hitSL = (t.side === "BUY" && price <= t.sl) || (t.side === "SELL" && price >= t.sl);
+        if (hitTP || hitSL) {
+            t.status = hitTP ? "TARGET HIT" : "SL HIT";
+            t.exitPrice = price;
+            activeTrades[symbol] = null;
+            cooldowns[symbol] = Date.now() + (3 * 60 * 1000); // 3 Min Cooldown
+            renderJournal(symbol);
+        }
+    }
+
+    function renderJournal(symbol) {
+        const list = document.getElementById(`${symbols[symbol]}-journal-list`);
+        const p = symbol.includes('BTC') ? 1 : 2;
+        list.innerHTML = tradeHistory[symbol].slice(0, 10).map(t => `
+            <div class="journal-entry">
+                <div class="journal-row"><b class="${t.side === 'BUY' ? 'bull' : 'bear'}">${t.setup}</b> <span>${t.status}</span></div>
+                <div class="journal-row" style="color:#848e9c;"><span>E: ${t.entry.toFixed(p)}</span> <span>SL: ${t.sl.toFixed(p)}</span> <span>TP: ${t.tp.toFixed(p)}</span></div>
+            </div>
+        `).join('');
+    }
+
+    function updateUI(prefix, setup, side, price, tp, sl, isBal, aggr, rr) {
+        const sigEl = document.getElementById(`${prefix}-signal`);
+        const p = prefix === 'btc' ? 1 : 2;
+        const isCooling = Date.now() < cooldowns[Object.keys(symbols).find(k => symbols[k] === prefix)];
+        
+        let html = `<b class="${side === 'BUY' ? 'bull' : 'bear'}">${isCooling ? 'COOLDOWN...' : (setup === 'NONE' ? 'SCANNING...' : setup)}</b>`;
+        html += `<div class="checklist" style="font-size:11px;">
+            <div style="color:${aggr ? '#0ecb81' : '#848e9c'}">Aggression: ${aggr ? 'YES' : 'NO'}</div>
+            <div style="color:${rr >= 1.5 ? '#0ecb81' : '#f6465d'}">R:R Ratio: ${rr.toFixed(2)}x ${rr < 1.5 ? '(Low)' : ''}</div>
+        </div>`;
+        if (setup !== "NONE" && !isCooling) {
+            html += `<div style="margin-top:8px; padding:8px; background:#2b3339; border-radius:4px; font-size:10px;">
+                <div><b>ENTRY:</b> ${price.toFixed(p)}</div>
+                <div style="color:#f6465d;"><b>SL:</b> ${sl.toFixed(p)}</div>
+                <div style="color:#0ecb81;"><b>TP:</b> ${tp.toFixed(p)}</div>
+            </div>`;
+        }
+        sigEl.innerHTML = html;
+    }
+    init();
+</script>
+</body>
+</html>
